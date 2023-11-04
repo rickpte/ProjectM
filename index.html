@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>ProjectM</title>
+    <link href="projectm.css" rel="stylesheet">
+    <script src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <!-- <script src="projectm.js"></script> -->
+    <!-- <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/"
+        }
+      }
+    </script> -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.153.0/examples/jsm/",
+          "troika-three-text": "https://unpkg.com/troika-three-text@latest/dist/troika-three-text.esm.js",
+          "troika-three-utils": "https://unpkg.com/troika-three-utils@latest/dist/troika-three-utils.esm.js",
+          "troika-worker-utils": "https://unpkg.com/troika-worker-utils@latest/dist/troika-worker-utils.esm.js",
+          "webgl-sdf-generator": "https://unpkg.com/webgl-sdf-generator@latest/dist/webgl-sdf-generator.mjs",
+          "bidi-js": "https://unpkg.com/bidi-js@latest/dist/bidi.mjs"
+        }
+      }
+    </script>
+</head>
+<body>
+  <div id="blocker">
+    <div id="instructions">
+      <p id="instructions-title">
+        Click to play
+      </p>
+      <p>
+        This is just a demo to test the controls.
+      </p>
+      <p>
+        Desktop: WASD keys and MOUSE<br>
+        Mobile: Touch and drag<br>
+        VR: Thumb sticks to move
+      </p>
+    </div>
+  </div>
+  <div id="console">
+    <div id="console-text">ProjectM<br></div>
+    <div id="console-view"></div>
+  </div>
+  <div class="taskbar" id="taskbar">
+    <div class="text-field">
+      <input type="text" id="commandText" value="" />
+    </div>
+  </div>
+  <div id="three-div"></div>
+  <script>
+    var s = document.createElement('script');
+      s.setAttribute('src', 'projectm.js?v=' + Date.now());
+      document.body.appendChild(s);
+  </script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+html, body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-color: #000000;
+    color: #FFF;
+    font-size: 12pt;
+    margin: 0;
+    padding: 0;
+}
+
+a {
+  color: #FFF;
+  /* text-decoration: none; */
+  /* font-weight: bold; */
+}
+
+canvas {
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: rgba(0,0,0,0);
+  -webkit-touch-callout: none;
+  background-color: #CCCCCC;
+  display: block;
+  /* margin: 0 auto; */
+  user-select: none;
+  border: none;
+}
+
+#console {
+  border: none;
+  bottom: 68px;
+  top: 20px;
+  left: 20px;
+  width: 640px;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  padding: 0;
+  position: absolute;
+  z-index: 10;
+}
+
+#console-text {
+  line-height: 150%;
+
+  user-select: none;
+        -moz-user-select: none;
+        -khtml-user-select: none;
+        -webkit-user-select: none;
+        -o-user-select: none;
+}
+
+.taskbar {
+  background-color: rgba(.2, .2, .2, .2);
+  height: 50px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  z-index: 10;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+.taskbar .text-field {
+  display: flex;
+  align-items: center;
+}
+
+.taskbar .text-field input[type="text"] {
+  height: 30px;
+  padding: 4px;
+  border: none;
+  border-radius: 3px;
+  margin-right: 5px;
+  font-size: 14px;
+  width: 400px;
+  background-color: rgba(.2, .2, .2, .2);
+  color: #FFFFFF;
+}
+
+.taskbar .text-field .search-button {
+  height: 30px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 3px;
+  background-color: #808080;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#blocker {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  z-index: 100;
+}
+
+#instructions {
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  text-align: center;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#instructions-title {
+  font-size: 36px;
+}
