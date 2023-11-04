@@ -25,6 +25,9 @@ const minPolarAngle = 0; // radians
 const maxPolarAngle = Math.PI; // radians
 const pointerSpeed = 1.0;
 
+let touchStartX, touchStartY, touchX, touchY;
+let inTouchMove = false;
+
 let controller1, controller2;
 let controllerGrip1, controllerGrip2;
 let cameraVector = new THREE.Vector3();
@@ -118,7 +121,7 @@ function setupGui() {
         closeStartScreen();
     });  
 
-    setTimeout(checkXRButton, 100);
+    // setTimeout(checkXRButton, 100);
 }
 
 function checkXRButton() {
@@ -436,6 +439,7 @@ function moveWithKeys(dt) {
 function setupMobile() {
 
     window.addEventListener('touchstart', onTouchStart, { passive: false });
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
     window.addEventListener('touchend', onTouchEnd, { passive: false });
 
 }
@@ -445,92 +449,92 @@ function onTouchStart(evt) {
     
     if (projectm.controlMode != 2) setControlMode(2);
 	
-    const touches = evt.changedTouches;
+    const touches = evt.touches;
     for (let i = 0; i < touches.length; i++) {
-        let relativeX = Math.floor(touches[i].pageX);
-        let relativeY = Math.floor(touches[i].pageY);
+        let x = Math.floor(touches[i].pageX);
+        let y = Math.floor(touches[i].pageY);
 
-        // projectm.log('touch: ' + relativeX + ', ' + relativeY);
-        if (relativeY < canvasHeight - 100) {
+        if (y < canvasHeight - document.getElementById('taskbar').clientHeight) {
             evt.preventDefault();
+
+            touchX = x;
+            touchY = y;
+            touchStartX = touchX;
+            touchStartY = touchY;
+            inTouchMove = true;
+
+            // console.log('touch start: ' + touchX + ', ' + touchY);
         }
+    }
+}
 
-        let x = Math.floor(relativeX / (canvasWidth / 5));
-        let y = Math.floor(relativeY / (canvasHeight / 3));
+function onTouchMove(evt) {
+    // evt.preventDefault();
 
-        if (x == 0 && y == 1) projectm.input.keyW = true;
-        else if (x == 0 && y == 2) projectm.input.keyS = true;
-        else if (x == 3) projectm.input.keyQ = true;
-        else if (x == 4) projectm.input.keyE = true;
-		
-		// if (relativeY > canvasHeight - document.getElementById('taskbar').clientHeight) {
-		// 	taskbarFocus = true;
-		// 	document.getElementById('commandText').focus();
-		// }
+    const touches = evt.touches;
+    for (let i = 0; i < touches.length; i++) {
+        let x = Math.floor(touches[0].pageX);
+        let y = Math.floor(touches[0].pageY);
+
+        touchX = x;
+        touchY = y;
+        // console.log('touch move: ' + touchX + ', ' + touchY);
     }
 }
 
 function onTouchEnd(evt) {
     // evt.preventDefault();
 
-    const touches = evt.changedTouches;
-    for (let i = 0; i < touches.length; i++) {
-        let relativeX = Math.floor(touches[0].pageX);
-        let relativeY = Math.floor(touches[0].pageY);
-
-        let x = Math.floor(relativeX / (canvasWidth / 5));
-        let y = Math.floor(relativeY / (canvasHeight / 3));
-
-        if (x == 0 && y == 1) projectm.input.keyW = false;
-        else if (x == 0 && y == 2) projectm.input.keyS = false;
-        else if (x == 3) projectm.input.keyQ = false;
-        else if (x == 4) projectm.input.keyE = false;
-    }
+    // console.log('touch end');
+    inTouchMove = false;
 }
 
 function moveWithMobile(dt) {
-    const acc = 10;
-    const max = 20;
-    const cap = 1;
+    // const acc = 10;
+    // const max = 20;
+    // const cap = 1;
 
-    if (projectm.input.keyW) {
-        if (camSpeed[2] < max) camSpeed[2] += dt * -acc;
-    }
-    if (projectm.input.keyS) {
-        if (camSpeed[2] > -max) camSpeed[2] -= dt * -acc;
-    }
-    if (!projectm.input.keyW && !projectm.input.keyS) {
-        if (camSpeed[2] > cap) camSpeed[2] -= dt * acc;
-        else if (camSpeed[2] < -cap) camSpeed[2] += dt * acc;
-        else camSpeed[2] = 0;
-    }
+    // if (projectm.input.keyW) {
+    //     if (camSpeed[2] < max) camSpeed[2] += dt * -acc;
+    // }
+    // if (projectm.input.keyS) {
+    //     if (camSpeed[2] > -max) camSpeed[2] -= dt * -acc;
+    // }
+    // if (!projectm.input.keyW && !projectm.input.keyS) {
+    //     if (camSpeed[2] > cap) camSpeed[2] -= dt * acc;
+    //     else if (camSpeed[2] < -cap) camSpeed[2] += dt * acc;
+    //     else camSpeed[2] = 0;
+    // }
 
-    if (projectm.input.keyA) {
-        if (camSpeed[0] < max) camSpeed[0] -= dt * acc;
-    }
-    if (projectm.input.keyD) {
-        if (camSpeed[0] > -max) camSpeed[0] += dt * acc;
-    }
-    if (!projectm.input.keyA && !projectm.input.keyD) {
-        if (camSpeed[0] > cap) camSpeed[0] -= dt * acc;
-        else if (camSpeed[0] < -cap) camSpeed[0] += dt * acc;
-        else camSpeed[0] = 0;
-    }
+    // if (projectm.input.keyA) {
+    //     if (camSpeed[0] < max) camSpeed[0] -= dt * acc;
+    // }
+    // if (projectm.input.keyD) {
+    //     if (camSpeed[0] > -max) camSpeed[0] += dt * acc;
+    // }
+    // if (!projectm.input.keyA && !projectm.input.keyD) {
+    //     if (camSpeed[0] > cap) camSpeed[0] -= dt * acc;
+    //     else if (camSpeed[0] < -cap) camSpeed[0] += dt * acc;
+    //     else camSpeed[0] = 0;
+    // }
 
-    if (projectm.input.keyQ) {
-        playerPivot.rotation.y += 1 * dt;
+    if (inTouchMove) {
+        let dx = touchX - touchStartX;
+        let da = dx * -.02;
+
+        playerPivot.rotation.y += da * dt;
+
+        let dy = touchY - touchStartY;
+        camSpeed[2] = dy * .05;
+
+        camVector.setFromMatrixColumn(playerPivot.matrix, 2);
+        playerPivot.position.addScaledVector(camVector, camSpeed[2] * dt);
+
+        // camVector.setFromMatrixColumn(playerPivot.matrix, 0);
+        // playerPivot.position.addScaledVector(camVector, camSpeed[0] * dt);
+
+        // playerPivot.position.addScaledVector(camera.up, camSpeed[1] * dt);
     }
-    if (projectm.input.keyE) {
-        playerPivot.rotation.y -= 1 * dt;
-    }
-
-    camVector.setFromMatrixColumn(playerPivot.matrix, 2);
-    playerPivot.position.addScaledVector(camVector, camSpeed[2] * dt);
-
-    camVector.setFromMatrixColumn(playerPivot.matrix, 0);
-    playerPivot.position.addScaledVector(camVector, camSpeed[0] * dt);
-
-    playerPivot.position.addScaledVector(camera.up, camSpeed[1] * dt);
 }
 
 // VR Controllers
