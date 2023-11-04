@@ -19,7 +19,7 @@ function init() {
 }
 
 function setupSkydome(addWater) {
-    new THREE.TextureLoader().load('/data/images/sky1.jpg', function (t1) {
+    new THREE.TextureLoader().load('data/images/sky1.jpg', function (t1) {
         t1.minFilter = THREE.LinearFilter; // Texture is not a power-of-two size; use smoother interpolation.
         skyDome = new THREE.Mesh(
             new THREE.SphereGeometry(4000, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.5),
@@ -29,7 +29,7 @@ function setupSkydome(addWater) {
         projectm.scene.add(skyDome);
     });
     
-    new THREE.TextureLoader().load('/data/images/sand1.jpg', function (t2) {
+    new THREE.TextureLoader().load('data/images/sand1.jpg', function (t2) {
         if (addWater) {
             t2.minFilter = THREE.LinearFilter; // Texture is not a power-of-two size; use smoother interpolation.
             t2.wrapS = t2.wrapT = THREE.RepeatWrapping;

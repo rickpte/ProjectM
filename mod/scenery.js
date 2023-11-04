@@ -22,7 +22,7 @@ function init() {
             {
                 "use": true,
                 "loaded": false,
-                "filename": '/data/models/cybertruck2.glb',
+                "filename": 'data/models/cybertruck2.glb',
                 "position": [4, 0, -4],
                 "center": true,
                 "flipX": false,
@@ -33,7 +33,7 @@ function init() {
             {
                 "use": true,
                 "loaded": false,
-                "filename": '/data/models/teslay.glb',
+                "filename": 'data/models/teslay.glb',
                 "position": [8, 0, -4],
                 "center": false,
                 "flipX": false,
@@ -44,7 +44,7 @@ function init() {
             {
                 "use": true,
                 "loaded": false,
-                "filename": '/data/models/home.glb',
+                "filename": 'data/models/home.glb',
                 "position": [-14, 0, -4],
                 "center": false,
                 "flipX": false,
@@ -83,7 +83,6 @@ function loadModel(obj) {
     obj.loading = true;
 
     const loader = new GLTFLoader();
-    projectm.log('loading: ' + obj.filename.slice(obj.filename.lastIndexOf('/') + 1));
 
     loader.load(obj.filename, function (gltf) {
         let model = gltf.scene;
@@ -125,6 +124,7 @@ function loadModel(obj) {
         group.add(model);
         group.position.set(obj.position[0], obj.position[1], obj.position[2]);
 
+        projectm.log('loaded: ' + obj.filename.slice(obj.filename.lastIndexOf('/') + 1));
         if (projectm.settings.boxes) {
             obj.box = new THREE.Box3().setFromObject(model);
             const boxHelper = new THREE.Box3Helper(obj.box, 0xffff00);

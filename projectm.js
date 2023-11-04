@@ -2,32 +2,16 @@
 let projectm = {
   "version": 1,
   "controlMode": 0,
-  "networkUpdate": false,
   "mods": [],
   "logstate": {
     "idx": 0,
     "lines": [],
   },
-  "netplayer": {
-    "key": '',
-    "player": {
-      "id": 0,
-    },
-    "vehicle": {
-      "id": 0,
-    }
-  },
-  "netstate": {
-    "time": 0,
-    "messages": [],
-    "players": [],
-    "vehicles": [],
-  },
   "settings": {
     "shadows": true,
     "verbose": true,
     "network": false,
-    "boxes": true,
+    "boxes": false,
     "mode": "game",
   },
   "input": {

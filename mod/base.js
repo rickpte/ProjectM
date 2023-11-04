@@ -43,13 +43,13 @@ function init() {
     setupThree();
     setupMobile();
     setupVR();
-    setupPlatform();
+    // setupPlatform();
 
     // projectm.addScript('origin');
     // projectm.addScript('panels');
-    // projectm.addScript('world');
+    projectm.addScript('world');
     // projectm.addScript('dancer');
-    // projectm.addScript('scenery');
+    projectm.addScript('scenery');
 }
 
 function logFunc(msg) {
@@ -86,6 +86,9 @@ function executeCommand(cmd) {
                     projectm.addScript(args[1]);
                 }
                 break;
+            case "test":
+                console.log('test command');
+                break;
             default:
                 projectm.log('command not found');
                 break;
@@ -114,6 +117,17 @@ function setupGui() {
     instructions.addEventListener( 'touchstart', function () {
         closeStartScreen();
     });  
+
+    setTimeout(checkXRButton, 100);
+}
+
+function checkXRButton() {
+    for (let i = 0; i < document.body.children.length; i++) {
+        if (document.body.children[i].innerHTML == "WEBXR NOT AVAILABLE") {
+            document.body.children[i].innerHTML = "NO WEBXR";
+            document.body.children[i].style.display = 'none';
+        }
+    }
 }
 
 function closeStartScreen() {
