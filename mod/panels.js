@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Text } from 'troika-three-text';
 
 let text1;
-let idx = 0, lines = [];
+let idx = 0, max = 0, lines = [], changed = false;
 
 projectm.addMod(
     'panels',
@@ -44,8 +44,55 @@ function init() {
     text1.color = 0xFFFFFF;
     text1.maxWidth = 1.8;
     
+    for (let i = 0; i < 10; i++) {
+        lines[i] = "line" + (i + 1);
+        max++;
+    }
+    changed = true;
+
     // Update the rendering:
     text1.sync()
+
+    document.addEventListener('keydown', onKeyDown, false);
+
+    projectm.gamestate.modHasInput = true;
+}
+
+function onKeyDown(evt) {
+    evt.preventDefault();
+    // lines[0] += evt.code;
+
+    if (evt.code == "ArrowLeft") {
+
+    } else if (evt.code == "ArrowRight") {
+
+    } else if (evt.code == "ArrowUp") {
+        if (idx > 0) idx--;
+    } else if (evt.code == "ArrowDown") {
+        idx++;
+        if (idx >= max) {
+            lines[idx] = "";
+            max++;
+        }
+    } else if (evt.code == "Enter") {
+        idx++;
+        if (idx >= max) {
+            lines[idx] = "";
+            max++;
+        }
+
+    } else if (evt.code == "Backspace") {
+        lines[idx] = lines[idx].slice(0, lines[idx].length - 1);
+    } else {
+        if (evt.key == 'Unidentified') {
+            // projectm.log(evt.code);
+        } else if (evt.key == "Shift") {
+        } else {
+            lines[idx] += evt.key;
+        }
+    }
+
+    changed = true;
 }
 
 function cleanup() {
@@ -53,7 +100,7 @@ function cleanup() {
 }
 
 function update(dt) {
-    if (idx != projectm.logstate.idx) {
+    if (false && idx != projectm.logstate.idx) {
         console.log('Log updated');
         idx = projectm.logstate.idx;
 
@@ -62,6 +109,17 @@ function update(dt) {
             s += projectm.logstate.lines[i] + '\n';
         }
         text1.text = s;
+    }
+
+    if (changed) {
+        let line = '';
+        for (let i = 0; i < lines.length; i++) {
+            line += lines[i];
+            if (i == idx) line += '_';
+            line += '\n';
+        }
+        text1.text = line;
+        changed = false;
     }
 }
 

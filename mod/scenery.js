@@ -31,7 +31,7 @@ function init() {
                 "scale": 1.8
             },
             {
-                "use": true,
+                "use": false,
                 "loaded": false,
                 "filename": 'data/models/teslay.glb',
                 "position": [8, 0, -4],

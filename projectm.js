@@ -3,6 +3,9 @@ let projectm = {
   "version": 1,
   "controlMode": 0,
   "mods": [],
+  "gamestate": {
+    "modHasInput": false,
+  },
   "logstate": {
     "idx": 0,
     "lines": [],

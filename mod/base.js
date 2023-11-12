@@ -49,9 +49,9 @@ function init() {
     // setupPlatform();
 
     // projectm.addScript('origin');
-    // projectm.addScript('panels');
     projectm.addScript('world');
-    // projectm.addScript('dancer');
+    projectm.addScript('panels');
+    projectm.addScript('dancer');
     projectm.addScript('scenery');
 }
 
@@ -266,6 +266,7 @@ function render(time) {
 
 function onKeyDown(evt) {
     if (inStartScreen) return;
+    if (projectm.gamestate.modHasInput) return;
 
     if (taskbarFocus) {
         if (evt.code == "Enter") {
@@ -305,6 +306,8 @@ function onKeyDown(evt) {
 }
   
 function onKeyUp(evt) {
+    if (projectm.gamestate.modHasInput) return;
+
     if (!(evt.code == "F11" || evt.code == "F12")) {
         evt.preventDefault();
     }
@@ -328,6 +331,7 @@ function onKeyUp(evt) {
 
 function onMouseDown(event) {
     if (inStartScreen) return;
+    if (projectm.gamestate.modHasInput) return;
 
     if (!mouseLocked) {
 		if (event.clientY > canvasHeight - document.getElementById('taskbar').clientHeight) {
@@ -340,11 +344,13 @@ function onMouseDown(event) {
 }
 
 function onMouseUp(evt) {
+    if (projectm.gamestate.modHasInput) return;
     // evt.preventDefault();
     // mouseLeftDown = false;
 }
 
 function onMouseMove(event) {
+    if (projectm.gamestate.modHasInput) return;
     if (mouseLocked) {
         const movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
         const movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
@@ -446,6 +452,7 @@ function setupMobile() {
 
 function onTouchStart(evt) {
     if (inStartScreen) return;
+    // if (projectm.gamestate.modHasInput) return;
     
     if (projectm.controlMode != 2) setControlMode(2);
 	
@@ -469,6 +476,7 @@ function onTouchStart(evt) {
 }
 
 function onTouchMove(evt) {
+    // if (projectm.gamestate.modHasInput) return;
     // evt.preventDefault();
 
     const touches = evt.touches;
@@ -483,6 +491,7 @@ function onTouchMove(evt) {
 }
 
 function onTouchEnd(evt) {
+    // if (projectm.gamestate.modHasInput) return;
     // evt.preventDefault();
 
     // console.log('touch end');
