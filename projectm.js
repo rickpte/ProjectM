@@ -1,10 +1,13 @@
 
 let projectm = {
-  "version": 1,
-  "controlMode": 0,
   "mods": [],
   "gamestate": {
-    "modHasInput": false,
+    "controlMode": 0,
+    "networkUpdate": false,
+  },
+  "three": {
+    "renderer": null,
+    "scene": null,
   },
   "logstate": {
     "idx": 0,
@@ -14,10 +17,26 @@ let projectm = {
     "shadows": true,
     "verbose": true,
     "network": false,
-    "boxes": false,
+    "boxes": true,
+    "fog": false,
     "mode": "game",
   },
-  "input": {
+  "netplayer": {
+    "key": '',
+    "player": {
+      "id": 0,
+    },
+    "vehicle": {
+      "id": 0,
+    }
+  },
+  "netstate": {
+    "time": 0,
+    "messages": [],
+    "players": [],
+    "vehicles": [],
+  },
+"input": {
     "playerLeft": false,
     "playerRight": false,
     "playerForward": false,
@@ -31,9 +50,11 @@ let projectm = {
     "keyQ": false,
     "keyE": false,
   },
-  "log": function (msg) {
-    console.log(msg);
-    if (this.logFunc) this.logFunc(msg);
+  "log": function (msg, level = 1) {
+    if (level >= 2 || projectm.settings.verbose) {
+      console.log(msg);
+      if (this.logFunc) this.logFunc(msg);
+    }
   },
   "addScript": function (name) {
     var s = document.createElement('script');
@@ -54,6 +75,7 @@ let projectm = {
       "mins": mins,
       "maxs": maxs,
       "drawdist": drawdist,
+      "alwaysVisible": false,
       "viewLevel": -1,
     };
     this.mods.push(mod);

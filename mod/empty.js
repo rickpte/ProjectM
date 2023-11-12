@@ -7,9 +7,9 @@ projectm.addMod(
     update,
     getHeight,
     null,
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0]
+    [0, 0, 0],  // mins
+    [0, 0, 0],  // maxs
+    [0]   // drawdistances
 );
 
 function init() {

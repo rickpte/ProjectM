@@ -41,6 +41,10 @@ let fsButtonStyle = 'position: absolute; bottom: 4px; left: calc(50% + 60px); wi
 const groundSize = 50;
 
 function init() {
+    projectm.logFunc = logFunc;
+    projectm.log('ProjectM', 4);
+
+    closeStartScreen();
     setupGui();
 
     setupThree();
@@ -50,9 +54,8 @@ function init() {
 
     // projectm.addScript('origin');
     projectm.addScript('world');
-    projectm.addScript('panels');
-    projectm.addScript('dancer');
-    projectm.addScript('scenery');
+    // projectm.addScript('panels');
+    // projectm.addScript('scenery');
 }
 
 function logFunc(msg) {
@@ -65,16 +68,16 @@ function logFunc(msg) {
 function setControlMode(mode) {
     switch (mode) {
         case 1:
-            projectm.log('Switching to Desktop mode');
+            projectm.log('Switching to Desktop mode', 2);
             break;
         case 2:
-            projectm.log('Switching to Mobile mode');
+            projectm.log('Switching to Mobile mode', 2);
             break;
         case 3:
-            projectm.log('Switching to VR mode');
+            projectm.log('Switching to VR mode', 2);
             break;
     }
-    projectm.controlMode = mode;
+    projectm.gamestate.controlMode = mode;
 }
 
 function executeCommand(cmd) {
@@ -90,10 +93,10 @@ function executeCommand(cmd) {
                 }
                 break;
             case "test":
-                console.log('test command');
+                projectm.log('test command', 4);
                 break;
             default:
-                projectm.log('command not found');
+                projectm.log('command not found', 4);
                 break;
         }
     }
@@ -142,11 +145,10 @@ function closeStartScreen() {
 // Three rendering
 
 function setupThree() {
-    projectm.logFunc = logFunc;
     clock = new THREE.Clock();
     let container = document.getElementById('three-div');
 
-    projectm.log('Initializing Three');
+    projectm.log('Initializing Three', 1);
 
     renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
     renderer.setPixelRatio( window.devicePixelRatio );
@@ -160,6 +162,7 @@ function setupThree() {
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xCCCCCC);
+    if (projectm.settings.fog) scene.fog = new THREE.Fog( 0xaaaa00, 20, 50 );
 
     playerPivot = new THREE.Object3D();
     playerPivot.position.set(playerStart[0], playerStart[1], playerStart[2]);
@@ -195,15 +198,15 @@ function setupThree() {
     document.addEventListener('pointerlockchange', onPointerlockChange);
     document.addEventListener('pointerlockerror', onPointerlockError);
 
-    projectm.renderer = renderer;
-    projectm.scene = scene;
+    projectm.three.renderer = renderer;
+    projectm.three.scene = scene;
 
     onWindowResize();
     renderer.setAnimationLoop(frame);
 }
 
 function setFullscreen() {
-    projectm.log('setFullscreen');
+    projectm.log('setFullscreen', 1);
 	
     var elem = document.documentElement;
     if (elem.requestFullscreen) {
@@ -236,30 +239,113 @@ function frame() {
 function update(dt) {
     stats.update();
 
-    if (renderer.xr.isPresenting && projectm.controlMode != 3) setControlMode(3);
+    if (renderer.xr.isPresenting && projectm.gamestate.controlMode != 3) setControlMode(3);
 
-    if (projectm.controlMode == 1) {
+    if (projectm.gamestate.controlMode == 1) {
         moveWithKeys(dt);
-    } else if (projectm.controlMode == 2) {
+    } else if (projectm.gamestate.controlMode == 2) {
         moveWithMobile(dt);
-    } else if (projectm.controlMode == 3) {
+    } else if (projectm.gamestate.controlMode == 3) {
         moveWithVR();
     }
+
+    updateModState();
 
     for (let i = 0; i < projectm.mods.length; i++) {
         if (projectm.mods[i].loaded) {
             projectm.mods[i].updateFunc(dt);
-        } else {
-            projectm.mods[i].loaded = true;
-            projectm.mods[i].initFunc();
         }
     }
+}
+    
+function updateModState() {
+    let campos = playerPivot.position.clone();
 
+    for (let i = 0; i < projectm.mods.length; i++) {
+        let mod = projectm.mods[i];
+
+        if (!mod.active) {
+
+            projectm.log('activating mod: ' + mod.name);
+
+            if (mod.mins[0] == 0 && mod.mins[1] == 0 && mod.mins[2] == 0 &&
+                mod.maxs[0] == 0 && mod.maxs[1] == 0 && mod.maxs[2] == 0) {
+                
+                projectm.log('mod always visible');
+                mod.alwaysVisible = true;
+            
+            } else {
+
+                let bbmin = new THREE.Vector3(mod.mins[0], mod.mins[1], mod.mins[2]);
+                let bbmax = new THREE.Vector3(mod.maxs[0], mod.maxs[1], mod.maxs[2]);
+                mod.box = new THREE.Box3(bbmin, bbmax);
+                mod.boxes = [];
+
+                for (let i = 0; i < mod.drawdist.length; i++) {
+                    let bbmin0 = new THREE.Vector3(mod.mins[0] - mod.drawdist[i], mod.mins[1] - mod.drawdist[i], mod.mins[2] - mod.drawdist[i]);
+                    let bbmax0 = new THREE.Vector3(mod.maxs[0] + mod.drawdist[i], mod.maxs[1] + mod.drawdist[i], mod.maxs[2] + mod.drawdist[i]);
+                    mod.boxes[i] = new THREE.Box3(bbmin0, bbmax0);
+                }
+
+                if (projectm.settings.boxes) {
+                    let boxHelper = new THREE.Box3Helper(mod.box, 0xffffff);
+                    scene.add(boxHelper);
+
+                    let color = 0x0000ff;
+                    for (let i = 0; i < mod.boxes.length; i++) {
+                        let boxHelper0 = new THREE.Box3Helper(mod.boxes[i], color);
+                        color *= 100;
+                        scene.add(boxHelper0);
+                    }
+                }
+            }
+
+            mod.viewLevel = -1;
+            mod.active = true;
+            console.log(mod);
+        }
+
+        let oldViewLevel = mod.viewLevel;
+        let newViewLevel = -1;
+
+        if (mod.alwaysVisible) {
+
+            if (!mod.loaded) {
+                projectm.log('load mod: ' + mod.name);
+                mod.initFunc();
+                mod.loaded = true;
+                mod.viewLevel = 0;
+            }
+
+        } else {
+
+            for (let i = mod.boxes.length - 1; i >= 0; i--) {
+                if (mod.boxes[i].containsPoint(campos)) {
+                    newViewLevel = i;
+                }
+            }
+
+            if (newViewLevel >= 0 && oldViewLevel == -1) {
+                if (!mod.loaded) {
+                    projectm.log('load mod: ' + mod.name);
+                    mod.initFunc();
+                    mod.loaded = true;
+                }
+            }
+
+            if (newViewLevel != oldViewLevel) {
+                projectm.log('set ' + mod.name + ' viewLevel: ' + newViewLevel);
+                mod.viewLevel = newViewLevel;
+                if (mod.viewLevelFunc) mod.viewLevelFunc(newViewLevel);
+            }
+        }
+    }
 }
 
 function render(time) {
 
     renderer.render(scene, camera);
+
 }
 
 // Desktop controls
@@ -368,11 +454,11 @@ function onMouseMove(event) {
 
 function onPointerlockChange() {
     if (document.body.ownerDocument.pointerLockElement === document.body) {
-        console.log('mouse locked');
+        projectm.log('mouse locked', 1);
         mouseLocked = true;
         setControlMode(1);
 	} else {
-        console.log('mouse unlocked');
+        projectm.log('mouse unlocked', 1);
         mouseLocked = false;
     }
 }
@@ -454,7 +540,7 @@ function onTouchStart(evt) {
     if (inStartScreen) return;
     // if (projectm.gamestate.modHasInput) return;
     
-    if (projectm.controlMode != 2) setControlMode(2);
+    if (projectm.gamestate.controlMode != 2) setControlMode(2);
 	
     const touches = evt.touches;
     for (let i = 0; i < touches.length; i++) {
@@ -470,7 +556,7 @@ function onTouchStart(evt) {
             touchStartY = touchY;
             inTouchMove = true;
 
-            // console.log('touch start: ' + touchX + ', ' + touchY);
+            projectm.log('touch start: ' + touchX + ', ' + touchY);
         }
     }
 }
@@ -549,7 +635,7 @@ function moveWithMobile(dt) {
 // VR Controllers
 
 function setupVR() {
-    projectm.log('Initializing VR');
+    projectm.log('Initializing VR', 1);
 
     renderer.xr.enabled = true;
 	renderer.xr.setFramebufferScaleFactor(2.0);         // increases the resolution on Quest

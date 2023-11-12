@@ -68,7 +68,7 @@ function cleanup() {
         if (models[i].group) {
 
             models[i].group.remove(models[i].model);
-            projectm.scene.remove(models[i].group);
+            projectm.three.scene.remove(models[i].group);
 
             models[i].model = null;
             models[i].group = null;
@@ -133,7 +133,7 @@ function loadModel(obj) {
             projectm.log('(' + (obj.box.max.x - obj.box.min.x) + ', ' + (obj.box.max.y - obj.box.min.y) + ', ' + (obj.box.max.z - obj.box.min.z) + ')');
         }
 
-        projectm.scene.add(group);
+        projectm.three.scene.add(group);
 
         obj.model = model;
         obj.group = group;

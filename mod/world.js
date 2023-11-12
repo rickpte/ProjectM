@@ -26,7 +26,7 @@ function setupSkydome(addWater) {
             new THREE.MeshBasicMaterial({ map: t1, side: THREE.BackSide, fog: false })
         );
         skyDome.position.y = -50;
-        projectm.scene.add(skyDome);
+        projectm.three.scene.add(skyDome);
     });
     
     new THREE.TextureLoader().load('data/images/sand1.jpg', function (t2) {
@@ -47,7 +47,7 @@ function setupSkydome(addWater) {
             water.position.y = 0;
             water.rotation.x = -Math.PI / 2;
             if (projectm.settings.shadows) water.receiveShadow = true;
-            projectm.scene.add(water);
+            projectm.three.scene.add(water);
         }
     });
 }

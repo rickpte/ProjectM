@@ -30,10 +30,10 @@ function init() {
     wall.position.x = 0;
     wall.position.y = 1;
     wall.position.z = -4.01;
-    projectm.scene.add(wall);
+    projectm.three.scene.add(wall);
 
     text1 = new Text()
-    projectm.scene.add(text1)
+    projectm.three.scene.add(text1)
     
     // Set properties to configure:
     text1.text = s;
@@ -53,9 +53,8 @@ function init() {
     // Update the rendering:
     text1.sync()
 
-    document.addEventListener('keydown', onKeyDown, false);
-
-    projectm.gamestate.modHasInput = true;
+    // document.addEventListener('keydown', onKeyDown, false);
+    // projectm.gamestate.modHasInput = true;
 }
 
 function onKeyDown(evt) {
