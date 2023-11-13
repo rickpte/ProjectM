@@ -33,7 +33,6 @@ let controllerGrip1, controllerGrip2;
 let cameraVector = new THREE.Vector3();
 let prevGamePads = new Map();
 let speedFactor = [0.2, 0.2, 0.2, 0.2];
-let isSelecting = false;
 
 let vrButtonStyle = 'position: absolute; bottom: 4px; left: calc(50% - 50px); width: 100px; padding: 12px 6px; border: 0px solid rgb(255, 255, 255); border-radius: 4px; background: rgba(0, 0, 0, 0.1); color: rgb(255, 255, 255); text-align: center; opacity: 0.5; outline: none; z-index: 30; cursor: pointer;';
 let fsButtonStyle = 'position: absolute; bottom: 4px; left: calc(50% + 60px); width: 100px; padding: 12px 6px; border: 0px solid rgb(255, 255, 255); border-radius: 4px; background: rgba(0, 0, 0, 0.1); color: rgb(255, 255, 255); text-align: center; opacity: 0.5; outline: none; z-index: 30; cursor: pointer;';
@@ -44,7 +43,7 @@ function init() {
     projectm.logFunc = logFunc;
     projectm.log('ProjectM', 4);
 
-    closeStartScreen();
+    // closeStartScreen();
     setupGui();
 
     setupThree();
@@ -54,8 +53,8 @@ function init() {
 
     // projectm.addScript('origin');
     projectm.addScript('world');
-    // projectm.addScript('panels');
-    // projectm.addScript('scenery');
+    projectm.addScript('panels');
+    projectm.addScript('scenery');
 }
 
 function logFunc(msg) {
@@ -150,7 +149,7 @@ function setupThree() {
 
     projectm.log('Initializing Three', 1);
 
-    renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
+    renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: false });
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
@@ -311,7 +310,7 @@ function updateModState() {
         if (mod.alwaysVisible) {
 
             if (!mod.loaded) {
-                projectm.log('load mod: ' + mod.name);
+                projectm.log('calling init for mod: ' + mod.name);
                 mod.initFunc();
                 mod.loaded = true;
                 mod.viewLevel = 0;
@@ -322,6 +321,8 @@ function updateModState() {
             for (let i = mod.boxes.length - 1; i >= 0; i--) {
                 if (mod.boxes[i].containsPoint(campos)) {
                     newViewLevel = i;
+                } else {
+                    break;
                 }
             }
 
@@ -653,9 +654,11 @@ function setupControllers() {
     controller1.addEventListener('selectstart', onSelectStart);
     controller1.addEventListener('selectend', onSelectEnd);
     controller1.addEventListener( 'connected', function ( event ) {
+        projectm.log('controller1 connected');
         this.add(buildController(event.data));
     } );
     controller1.addEventListener( 'disconnected', function () {
+        projectm.log('controller1 disconnected');
         this.remove(this.children[0]);
     });
 	controller1.addEventListener("squeezestart", onSqueezeEvent);
@@ -667,9 +670,11 @@ function setupControllers() {
     controller2.addEventListener('selectstart', onSelectStart);
     controller2.addEventListener('selectend', onSelectEnd);
     controller2.addEventListener( 'connected', function ( event ) {
+        projectm.log('controller2 connected');
         this.add(buildController(event.data));
     } );
     controller2.addEventListener( 'disconnected', function () {
+        projectm.log('controller2 disconnected');
         this.remove(this.children[0]);
     } );
 	controller2.addEventListener("squeezestart", onSqueezeEvent);
@@ -695,8 +700,8 @@ function buildController( data ) {
 
         case 'tracked-pointer':
             geometry = new THREE.BufferGeometry();
-            geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( [ 0, 0, 0, 0, 0, - 1 ], 3 ) );
-            geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( [ 0.5, 0.5, 0.5, 0, 0, 0 ], 3 ) );
+            geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( [ 0, 0, 0, 0, 0, -10 ], 3 ) );
+            geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( [ 0.8, 0.5, 0.5, 0, 0, 0 ], 3 ) );
 
             material = new THREE.LineBasicMaterial( { vertexColors: true, blending: THREE.AdditiveBlending } );
 
@@ -710,35 +715,31 @@ function buildController( data ) {
 }
 
 function onSelectStart() {
-    isSelecting = true;
+    
+    this.userData.isSelecting = true;
+				
 }
 
 function onSelectEnd() {
-    isSelecting = false;
+    
+    this.userData.isSelecting = false;
 }
 
 function onSqueezeEvent(event) {
     let source = event.data;
     
-    console.log(event);
-    console.log(source);
-
 	if (source.targetRayMode != "tracked-pointer") {
 		return;
 	}
 
-	// let targetRayPose = event.frame.getPose(source.targetRaySpace, myRefSpace);
-	// if (!targetRayPose) {
-	// 	return;
-	// }
-
 	switch (event.type) {
 		case "squeezestart":
+            this.userData.isSqueezing = true;
 			break;
 		case "squeeze":
-			// source.gamepad.hapticActuators[0].pulse(1, 100);
 			break;
 		case "squeezeend":
+            this.userData.isSqueezing = false;
 			break;
 	}
 }
@@ -748,6 +749,19 @@ function moveWithVR() {
 
     if (renderer.xr.isPresenting) {
         camera.getWorldDirection(cameraVector);
+
+        if (controller1.userData.isSelecting) {
+            // projectm.log('isSelecting1');
+        }
+        if (controller2.userData.isSelecting) {
+            // projectm.log('isSelecting2');
+        }
+        if (controller1.userData.isSqueezing) {
+            // projectm.log('isSqueezing1');
+        }
+        if (controller2.userData.isSqueezing) {
+            // projectm.log('isSqueezing2');
+        }
         
         let session = renderer.xr.getSession();
 
@@ -757,132 +771,54 @@ function moveWithVR() {
             }
             if (!source.gamepad) continue;
 
-            const old = prevGamePads.get(source);
-            const data = {
-                handedness: handedness,
-                buttons: source.gamepad.buttons.map((b) => b.value),
-                axes: source.gamepad.axes.slice(0)
-            };
-            if (old) {
-                data.buttons.forEach((value, i) => {
-                    if (value !== old.buttons[i] || Math.abs(value) > 0.8) {
-                        if (value === 1) {
-                            console.log("Button " + i + " Down");
-
-                            if (data.handedness == "left") {
-                                console.log("Left Paddle Down");
-                            } else {
-                                console.log("Right Paddle Down");
-                            }
-                        } else {
-                            console.log("Button " + i + " Up");
-
-                            if (i == 1) {
-                                if (data.handedness == "left") {
-                                    console.log("Left Paddle Down");
-                                } else {
-                                    console.log("Right Paddle Down");
-                                }
-                            }
-                        }
-                    }
-                });
-
-                data.axes.forEach((value, i) => {
-                    //handlers for thumbsticks
-                    //if thumbstick axis has moved beyond the minimum threshold from center, windows mixed reality seems to wander up to about .17 with no input
-                    if (Math.abs(value) > 0.2) {
-                        //set the speedFactor per axis, with acceleration when holding above threshold, up to a max speed
-                        speedFactor[i] > 1 ? (speedFactor[i] = 1) : (speedFactor[i] *= 1.005);
-                        // console.log(value, speedFactor[i], i);
-                        if (i == 2) {
-                            //left and right axis on thumbsticks
-                            if (data.handedness == "left") {
-                                // (data.axes[2] > 0) ? console.log('left on left thumbstick') : console.log('right on left thumbstick')
-
-                                //move our playerPivot
-                                //we reverse the vectors 90degrees so we can do straffing side to side movement
-                                playerPivot.position.x -= cameraVector.z * speedFactor[i] * data.axes[2];
-                                playerPivot.position.z += cameraVector.x * speedFactor[i] * data.axes[2];
-
-                                //provide haptic feedback if available in browser
-                                // if (
-                                //     source.gamepad.hapticActuators &&
-                                //     source.gamepad.hapticActuators[0]
-                                // ) {
-                                //     var pulseStrength = Math.abs(data.axes[2]) + Math.abs(data.axes[3]);
-                                //     if (pulseStrength > 0.75) {
-                                //         pulseStrength = 0.75;
-                                //     }
-
-                                //     var didPulse = source.gamepad.hapticActuators[0].pulse(
-                                //         pulseStrength,
-                                //         100
-                                //     );
-                                // }
-                            } else {
-                                // (data.axes[2] > 0) ? console.log('left on right thumbstick') : console.log('right on right thumbstick')
-                                playerPivot.rotateY(-THREE.MathUtils.degToRad(data.axes[2]));
-                            }
-                            // controls.update();
-                        }
-
-                        if (i == 3) {
-                            //up and down axis on thumbsticks
-                            if (data.handedness == "left") {
-                                // (data.axes[3] > 0) ? console.log('up on left thumbstick') : console.log('down on left thumbstick')
-                                playerPivot.position.y -= speedFactor[i] * data.axes[3];
-                                //provide haptic feedback if available in browser
-                                // if (
-                                //     source.gamepad.hapticActuators &&
-                                //     source.gamepad.hapticActuators[0]
-                                // ) {
-                                //     var pulseStrength = Math.abs(data.axes[3]);
-                                //     if (pulseStrength > 0.75) {
-                                //         pulseStrength = 0.75;
-                                //     }
-                                //     var didPulse = source.gamepad.hapticActuators[0].pulse(
-                                //         pulseStrength,
-                                //         100
-                                //     );
-                                // }
-                            } else {
-                                // (data.axes[3] > 0) ? console.log('up on right thumbstick') : console.log('down on right thumbstick')
-                                playerPivot.position.x -= cameraVector.x * speedFactor[i] * data.axes[3];
-                                playerPivot.position.z -= cameraVector.z * speedFactor[i] * data.axes[3];
-
-                                //provide haptic feedback if available in browser
-                                // if (
-                                //     source.gamepad.hapticActuators &&
-                                //     source.gamepad.hapticActuators[0]
-                                // ) {
-                                //     var pulseStrength = Math.abs(data.axes[2]) + Math.abs(data.axes[3]);
-                                //     if (pulseStrength > 0.75) {
-                                //         pulseStrength = 0.75;
-                                //     }
-                                //     var didPulse = source.gamepad.hapticActuators[0].pulse(
-                                //         pulseStrength,
-                                //         100
-                                //     );
-                                // }
-                            }
-                            // controls.update();
-                        }
-                    } else {
-                        //axis below threshold - reset the speedFactor
-                        if (Math.abs(value) > 0.05) {
-                            console.log(
-                                "speedFactor getting reset as value not zero but threshold not met",
-                                value,
-                                speedFactor[i],
-                                i
-                            );
-                            speedFactor[i] = 0.05;
-                        }
-                    }
-                });
+            if (handedness == 'left') {
+                if (source.gamepad.buttons[4].value > .8) 
+                    projectm.input.buttonX = true;
+                else
+                    projectm.input.buttonX = false;
+                if (source.gamepad.buttons[5].value > .8) 
+                    projectm.input.buttonY = true;
+                else                   
+                    projectm.input.buttonY = false;
+            } else {
+                if (source.gamepad.buttons[4].value > .8) 
+                    projectm.input.buttonA = true;
+                else
+                    projectm.input.buttonA = false;
+                if (source.gamepad.buttons[5].value > .8) 
+                    projectm.input.buttonB = true;
+                else
+                    projectm.input.buttonB = false;
             }
-            prevGamePads.set(source, data);
+
+            source.gamepad.axes.forEach((value, i) => {
+                if (Math.abs(value) > 0.2) {
+
+                    speedFactor[i] > 1 ? (speedFactor[i] = 1) : (speedFactor[i] *= 1.005);
+
+                    if (i == 2) {
+                        if (handedness == "left") {
+                            playerPivot.rotateY(-THREE.MathUtils.degToRad(value));
+                        } else {
+                            playerPivot.position.x -= cameraVector.z * speedFactor[i] * value;
+                            playerPivot.position.z += cameraVector.x * speedFactor[i] * value;
+                        }
+                    }
+
+                    if (i == 3) {
+                        if (handedness == "left") {
+                            playerPivot.position.y -= speedFactor[i] * value;
+                        } else {
+                            playerPivot.position.x -= cameraVector.x * speedFactor[i] * value;
+                            playerPivot.position.z -= cameraVector.z * speedFactor[i] * value;
+                        }
+                    }
+                } else {
+                    if (Math.abs(value) > 0.05) {
+                        speedFactor[i] = 0.05;
+                    }
+                }
+            });
         }
     }
 }

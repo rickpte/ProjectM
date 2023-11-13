@@ -11,7 +11,7 @@ projectm.addMod(
     null,
     [0, 0, 0],
     [0, 0, 0],
-    [0, 0, 0]
+    [0]
 );
 
 function init() {

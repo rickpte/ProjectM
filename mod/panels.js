@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { Text } from 'troika-three-text';
 
+let viewLevel = -1;
 let text1, text2;
-let idx1 = 0, max1 = 0, lines1 = [], changed1 = false;
+let idx1 = 0, max1 = 28, lines1 = [], changed1 = false;
 let idx2 = 0, max2 = 0, lines2 = [], changed2 = false;
 
 projectm.addMod(
@@ -11,19 +12,15 @@ projectm.addMod(
     cleanup,
     update,
     getHeight,
-    null,
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0]
+    setViewLevel,
+    [0, 0, -5],
+    [5, 2, -3],
+    [2, 8]
 );
 
 function init() {
     text1 = createPanel(0, -4);
     text2 = createPanel(3, -4);
-
-
-    // document.addEventListener('keydown', onKeyDown, false);
-    // projectm.gamestate.modHasInput = true;
 }
 
 function createPanel(x, z) {
@@ -38,13 +35,12 @@ function createPanel(x, z) {
     var wall = new THREE.Mesh(geometry, material);
     wall.position.x = x + 1;
     wall.position.y = 1;
-    wall.position.z = z -.01;
-    projectm.scene.add(wall);
+    wall.position.z = z -.04;
+    projectm.three.scene.add(wall);
 
     let text = new Text()
     
     // Set properties to configure:
-    text.text = s;
     text.fontSize = 0.05;
     text.position.x = x + .05;
     text.position.y = 2 - .05;
@@ -52,16 +48,18 @@ function createPanel(x, z) {
     text.color = 0xFFFFFF;
     text.maxWidth = 1.8;
 
-    text.text = 'panel';
+    // text.text = 'panel';
 
     // Update the rendering:
     text.sync();
-    projectm.scene.add(text);
+    projectm.three.scene.add(text);
 
     return text;
 }
 
 function onKeyDown(evt) {
+    if (viewLevel != 0) return;
+
     evt.preventDefault();
     // lines[0] += evt.code;
 
@@ -70,32 +68,33 @@ function onKeyDown(evt) {
     } else if (evt.code == "ArrowRight") {
 
     } else if (evt.code == "ArrowUp") {
-        if (idx > 0) idx--;
+        if (idx2 > 0) idx2--;
     } else if (evt.code == "ArrowDown") {
-        idx++;
-        if (idx >= max) {
-            lines[idx] = "";
-            max++;
+        idx2++;
+        if (idx2 >= max2) {
+            lines2[idx2] = "";
+            max2++;
         }
     } else if (evt.code == "Enter") {
-        idx++;
-        if (idx >= max) {
-            lines[idx] = "";
-            max++;
+        idx2++;
+        if (idx2 >= max2) {
+            lines2[idx2] = "";
+            max2++;
         }
 
     } else if (evt.code == "Backspace") {
-        lines[idx] = lines[idx].slice(0, lines[idx].length - 1);
+        lines2[idx2] = lines2[idx2].slice(0, lines2[idx2].length - 1);
     } else {
         if (evt.key == 'Unidentified') {
             // projectm.log(evt.code);
         } else if (evt.key == "Shift") {
         } else {
-            lines[idx] += evt.key;
+            if (!lines2[idx2]) lines2[idx2] = '';
+            lines2[idx2] += evt.key;
         }
     }
 
-    changed = true;
+    changed2 = true;
 }
 
 function cleanup() {
@@ -103,11 +102,16 @@ function cleanup() {
 }
 
 function update(dt) {
+
     if (idx1 != projectm.logstate.idx) {
         idx1 = projectm.logstate.idx;
 
+        let start = 0;
+        if (idx1 >= max1) {
+            start = idx1 - max1;
+        }
         let s = '';
-        for (let i = 0; i < idx1; i++) {
+        for (let i = start; i < idx1; i++) {
             s += projectm.logstate.lines[i] + '\n';
         }
         text1.text = s;
@@ -127,4 +131,26 @@ function update(dt) {
 
 function getHeight() {
     return 0;
+}
+
+function setViewLevel(v) {
+
+    if (v == -1) {
+        text1.visible = false;
+        text2.visible = false;
+    } else if (v == 1) {
+        text1.visible = true;
+        text2.visible = true;
+    } 
+    
+    if (v == 0) {
+        projectm.log('panels taking keyboard control');
+        document.addEventListener('keydown', onKeyDown, false);
+        projectm.gamestate.modHasInput = true;
+    } else if (viewLevel == 0) {
+        projectm.log('panels releasing keyboard control');
+        projectm.gamestate.modHasInput = false;
+    }
+
+    viewLevel = v;
 }

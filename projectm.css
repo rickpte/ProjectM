@@ -28,6 +28,7 @@ canvas {
 }
 
 #console {
+  /* display: none; */
   border: none;
   bottom: 68px;
   top: 20px;

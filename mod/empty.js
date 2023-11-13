@@ -6,7 +6,7 @@ projectm.addMod(
     cleanup,
     update,
     getHeight,
-    null,
+    setViewLevel,
     [0, 0, 0],  // mins
     [0, 0, 0],  // maxs
     [0]   // drawdistances
@@ -26,4 +26,8 @@ function update(dt) {
 
 function getHeight() {
     return 0;
+}
+
+function setViewLevel(v) {
+
 }

@@ -12,7 +12,7 @@ projectm.addMod(
     null,
     [0, 0, 0],
     [0, 0, 0],
-    [0, 0, 0]
+    [0]
 );
 
 function init() {
@@ -23,7 +23,7 @@ function init() {
                 "use": true,
                 "loaded": false,
                 "filename": 'data/models/cybertruck2.glb',
-                "position": [4, 0, -4],
+                "position": [-12, 0, 8],
                 "center": true,
                 "flipX": false,
                 "flipY": true,
@@ -34,7 +34,7 @@ function init() {
                 "use": false,
                 "loaded": false,
                 "filename": 'data/models/teslay.glb',
-                "position": [8, 0, -4],
+                "position": [-3, 0, 0],
                 "center": false,
                 "flipX": false,
                 "flipY": true,
@@ -45,7 +45,7 @@ function init() {
                 "use": true,
                 "loaded": false,
                 "filename": 'data/models/home.glb',
-                "position": [-14, 0, -4],
+                "position": [-20, 0, 0],
                 "center": false,
                 "flipX": false,
                 "flipY": false,

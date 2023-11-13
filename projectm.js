@@ -37,6 +37,7 @@ let projectm = {
     "vehicles": [],
   },
 "input": {
+    // Keyboard
     "playerLeft": false,
     "playerRight": false,
     "playerForward": false,
@@ -49,6 +50,11 @@ let projectm = {
     "keyF": false,
     "keyQ": false,
     "keyE": false,
+    // VR controllers
+    "buttonA": false,
+    "buttonB": false,
+    "buttonX": false,
+    "buttonY": false,
   },
   "log": function (msg, level = 1) {
     if (level >= 2 || projectm.settings.verbose) {
