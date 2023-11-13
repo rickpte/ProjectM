@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { Text } from 'troika-three-text';
 
-let text1;
-let idx = 0, max = 0, lines = [], changed = false;
+let text1, text2;
+let idx1 = 0, max1 = 0, lines1 = [], changed1 = false;
+let idx2 = 0, max2 = 0, lines2 = [], changed2 = false;
 
 projectm.addMod(
     'panels',
@@ -17,7 +18,15 @@ projectm.addMod(
 );
 
 function init() {
+    text1 = createPanel(0, -4);
+    text2 = createPanel(3, -4);
 
+
+    // document.addEventListener('keydown', onKeyDown, false);
+    // projectm.gamestate.modHasInput = true;
+}
+
+function createPanel(x, z) {
     var geometry = new THREE.PlaneGeometry(2, 2);
 	var material = new THREE.MeshStandardMaterial({
 		color: 0x444444,
@@ -27,34 +36,29 @@ function init() {
         opacity: 0.4
 	});
     var wall = new THREE.Mesh(geometry, material);
-    wall.position.x = 0;
+    wall.position.x = x + 1;
     wall.position.y = 1;
-    wall.position.z = -4.01;
-    projectm.three.scene.add(wall);
+    wall.position.z = z -.01;
+    projectm.scene.add(wall);
 
-    text1 = new Text()
-    projectm.three.scene.add(text1)
+    let text = new Text()
     
     // Set properties to configure:
-    text1.text = s;
-    text1.fontSize = 0.05;
-    text1.position.x = -1 + .05;
-    text1.position.y = 2 - .05;
-    text1.position.z = -4;
-    text1.color = 0xFFFFFF;
-    text1.maxWidth = 1.8;
-    
-    for (let i = 0; i < 10; i++) {
-        lines[i] = "line" + (i + 1);
-        max++;
-    }
-    changed = true;
+    text.text = s;
+    text.fontSize = 0.05;
+    text.position.x = x + .05;
+    text.position.y = 2 - .05;
+    text.position.z = z;
+    text.color = 0xFFFFFF;
+    text.maxWidth = 1.8;
+
+    text.text = 'panel';
 
     // Update the rendering:
-    text1.sync()
+    text.sync();
+    projectm.scene.add(text);
 
-    // document.addEventListener('keydown', onKeyDown, false);
-    // projectm.gamestate.modHasInput = true;
+    return text;
 }
 
 function onKeyDown(evt) {
@@ -99,26 +103,25 @@ function cleanup() {
 }
 
 function update(dt) {
-    if (false && idx != projectm.logstate.idx) {
-        console.log('Log updated');
-        idx = projectm.logstate.idx;
+    if (idx1 != projectm.logstate.idx) {
+        idx1 = projectm.logstate.idx;
 
         let s = '';
-        for (let i = 0; i < idx; i++) {
+        for (let i = 0; i < idx1; i++) {
             s += projectm.logstate.lines[i] + '\n';
         }
         text1.text = s;
     }
 
-    if (changed) {
+    if (changed2) {
         let line = '';
-        for (let i = 0; i < lines.length; i++) {
-            line += lines[i];
-            if (i == idx) line += '_';
+        for (let i = 0; i < lines2.length; i++) {
+            line += lines2[i];
+            if (i == idx2) line += '_';
             line += '\n';
         }
-        text1.text = line;
-        changed = false;
+        text2.text = line;
+        changed2 = false;
     }
 }
 
