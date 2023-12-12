@@ -3,24 +3,28 @@ import { Text } from 'troika-three-text';
 
 let viewLevel = -1;
 let text1, text2;
+let group;
 let idx1 = 0, max1 = 28, lines1 = [], changed1 = false;
-let idx2 = 0, max2 = 0, lines2 = [], changed2 = false;
+let idx2 = 0, max2 = 28, lines2 = [], changed2 = false;
 
-projectm.addMod(
+projectm.addModule(
     'panels',
     init,
     cleanup,
-    update,
-    getHeight,
-    setViewLevel,
-    [0, 0, -5],
-    [5, 2, -3],
-    [2, 8]
-);
+    update);
 
 function init() {
-    text1 = createPanel(0, -4);
-    text2 = createPanel(3, -4);
+    group = new THREE.Group();
+    group.position.x = -4;
+    group.rotation.y = .5;
+    group.position.z = -2;
+
+    text1 = createPanel(0, 0);
+    text2 = createPanel(2.1, 0);
+
+    projectm.three.scene.add(group);
+    
+    projectm.gamestate.modReadyCount++;
 }
 
 function createPanel(x, z) {
@@ -36,7 +40,7 @@ function createPanel(x, z) {
     wall.position.x = x + 1;
     wall.position.y = 1;
     wall.position.z = z -.04;
-    projectm.three.scene.add(wall);
+    group.add(wall);
 
     let text = new Text()
     
@@ -52,7 +56,7 @@ function createPanel(x, z) {
 
     // Update the rendering:
     text.sync();
-    projectm.three.scene.add(text);
+    group.add(text);
 
     return text;
 }
@@ -117,20 +121,30 @@ function update(dt) {
         text1.text = s;
     }
 
-    if (changed2) {
-        let line = '';
-        for (let i = 0; i < lines2.length; i++) {
-            line += lines2[i];
-            if (i == idx2) line += '_';
-            line += '\n';
-        }
-        text2.text = line;
-        changed2 = false;
-    }
-}
+    if (idx2 != projectm.chatstate.idx) {
+        idx2 = projectm.chatstate.idx;
 
-function getHeight() {
-    return 0;
+        let start = 0;
+        if (idx2 >= max2) {
+            start = idx2 - max2;
+        }
+        let s = '';
+        for (let i = start; i < idx2; i++) {
+            s += projectm.chatstate.lines[i] + '\n';
+        }
+        text2.text = s;
+    }
+
+    // if (changed2) {
+    //     let line = '';
+    //     for (let i = 0; i < lines2.length; i++) {
+    //         line += lines2[i];
+    //         if (i == idx2) line += '_';
+    //         line += '\n';
+    //     }
+    //     text2.text = line;
+    //     changed2 = false;
+    // }
 }
 
 function setViewLevel(v) {
@@ -144,12 +158,16 @@ function setViewLevel(v) {
     } 
     
     if (v == 0) {
-        projectm.log('panels taking keyboard control');
-        document.addEventListener('keydown', onKeyDown, false);
-        projectm.gamestate.modHasInput = true;
+        if (projectm.gamestate.controlMode != 1) {
+            projectm.log('panels taking keyboard control');
+            document.addEventListener('keydown', onKeyDown, false);
+            projectm.gamestate.modHasInput = true;
+        }
     } else if (viewLevel == 0) {
-        projectm.log('panels releasing keyboard control');
-        projectm.gamestate.modHasInput = false;
+        if (projectm.gamestate.controlMode != 1) {
+            projectm.log('panels releasing keyboard control');
+            projectm.gamestate.modHasInput = false;
+        }
     }
 
     viewLevel = v;

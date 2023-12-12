@@ -1,19 +1,13 @@
 import * as THREE from 'three';
 
-projectm.addMod(
-    'world',
+projectm.addModule(
+    'empty',
     init,
     cleanup,
-    update,
-    getHeight,
-    setViewLevel,
-    [0, 0, 0],  // mins
-    [0, 0, 0],  // maxs
-    [0]   // drawdistances
-);
+    update);
 
 function init() {
-
+    projectm.gamestate.modReadyCount++;
 }
 
 function cleanup() {
@@ -21,13 +15,5 @@ function cleanup() {
 }
 
 function update(dt) {
-
-}
-
-function getHeight() {
-    return 0;
-}
-
-function setViewLevel(v) {
 
 }

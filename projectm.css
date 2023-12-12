@@ -28,20 +28,45 @@ canvas {
 }
 
 #console {
-  /* display: none; */
   border: none;
   bottom: 68px;
   top: 20px;
-  left: 20px;
-  width: 640px;
+  right: 20px;
+  width: 49%;
   overflow-x: hidden;
   overflow-y: hidden;
   padding: 0;
   position: absolute;
   z-index: 10;
+  height: 80%;
+  text-align: right;
 }
 
 #console-text {
+  line-height: 150%;
+
+  user-select: none;
+        -moz-user-select: none;
+        -khtml-user-select: none;
+        -webkit-user-select: none;
+        -o-user-select: none;
+}
+
+#chat {
+  border: none;
+  bottom: 68px;
+  top: 20px;
+  left: 20px;
+  width: 49%;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  padding: 0;
+  position: absolute;
+  z-index: 10;
+  height: 80%;
+}
+
+#chat-text {
   line-height: 150%;
 
   user-select: none;
@@ -67,6 +92,7 @@ canvas {
 .taskbar .text-field {
   display: flex;
   align-items: center;
+  width: 40%;
 }
 
 .taskbar .text-field input[type="text"] {
@@ -76,7 +102,7 @@ canvas {
   border-radius: 3px;
   margin-right: 5px;
   font-size: 14px;
-  width: 400px;
+  width: 100%;
   background-color: rgba(.2, .2, .2, .2);
   color: #FFFFFF;
 }

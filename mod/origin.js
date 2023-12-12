@@ -1,23 +1,19 @@
 import * as THREE from 'three';
 
 const groundSize = 50;
-const h = 0.02;
+const h = -0.02;
 
-projectm.addMod(
+projectm.addModule(
     'origin',
     init,
     cleanup,
-    update,
-    getHeight,
-    null,
-    [0, 0, 0],
-    [0, 0, 0],
-    [0]
+    null
 );
 
 function init() {
     setupPlatform();
-    setupBox();
+    // setupBox();
+    projectm.gamestate.modReadyCount++;
 }
 
 function setupPlatform() {
@@ -39,8 +35,6 @@ function setupPlatform() {
 }
 
 function setupBox() {
-    projectm.log('setupBox', 1);
-
     const geometry = new THREE.BoxGeometry(groundSize, 20,  groundSize);
     const material = new THREE.MeshBasicMaterial({ color: 0xcccccc });
     var box = new THREE.Mesh(geometry, material);
@@ -52,13 +46,5 @@ function setupBox() {
 
 
 function cleanup() {
-
 }
 
-function update(dt) {
-
-}
-
-function getHeight() {
-    return 0;
-}

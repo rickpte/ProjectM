@@ -2,16 +2,11 @@ import * as THREE from 'three';
 
 let skyDome, water;
 
-projectm.addMod(
+projectm.addModule(
     'world',
     init,
     cleanup,
-    update,
-    getHeight,
-    null,
-    [0, 0, 0],
-    [0, 0, 0],
-    [0]
+    null
 );
 
 function init() {
@@ -27,39 +22,36 @@ function setupSkydome(addWater) {
         );
         skyDome.position.y = -50;
         projectm.three.scene.add(skyDome);
+
+        new THREE.TextureLoader().load('data/images/sand1.jpg', function (t2) {
+            if (addWater) {
+                t2.minFilter = THREE.LinearFilter; // Texture is not a power-of-two size; use smoother interpolation.
+                t2.wrapS = t2.wrapT = THREE.RepeatWrapping;
+                t2.repeat.set(100, 100);
+    
+                var geometry = new THREE.PlaneGeometry(8000, 8000, 4, 4);
+                var material = new THREE.MeshStandardMaterial({
+                    color: 0xcccccc,
+                    roughness: 1.0,
+                    metalness: 0.0,
+                    map: t2 
+                });
+                
+                water = new THREE.Mesh(geometry, material);
+                water.position.y = 0;
+                water.rotation.x = -Math.PI / 2;
+                if (projectm.settings.shadows) water.receiveShadow = true;
+                projectm.three.scene.add(water);
+
+                projectm.gamestate.modReadyCount++;
+
+            }
+        });
+    
     });
     
-    new THREE.TextureLoader().load('data/images/sand1.jpg', function (t2) {
-        if (addWater) {
-            t2.minFilter = THREE.LinearFilter; // Texture is not a power-of-two size; use smoother interpolation.
-            t2.wrapS = t2.wrapT = THREE.RepeatWrapping;
-            t2.repeat.set(100, 100);
-
-            var geometry = new THREE.PlaneGeometry(8000, 8000, 4, 4);
-            var material = new THREE.MeshStandardMaterial({
-                color: 0xcccccc,
-                roughness: 1.0,
-                metalness: 0.0,
-                map: t2 
-            });
-            
-            water = new THREE.Mesh(geometry, material);
-            water.position.y = 0;
-            water.rotation.x = -Math.PI / 2;
-            if (projectm.settings.shadows) water.receiveShadow = true;
-            projectm.three.scene.add(water);
-        }
-    });
 }
 
 function cleanup() {
 
-}
-
-function update(dt) {
-
-}
-
-function getHeight() {
-    return 0;
 }

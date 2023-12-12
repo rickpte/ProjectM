@@ -12,12 +12,14 @@ let inStartScreen = true;
 let renderer, scene, camera, clock, stats;
 let hemiLight, dirLight;
 let canvasWidth, canvasHeight;
-let playerPivot;
+let inTextInput = false;
 
-let playerStart = [0, 1.6, 0];
-let camSpeed = [0, 0, 0];
-let taskbarFocus = false;
+let viewPivot;
+let playerStart = [0, 1.6, 5];
+let camSpeed = 20;
+
 let mouseLocked = false;
+let camMouseX = 0, camMouseY = 0;
 let camEuler = new Euler(0, 0, 0, 'YXZ');
 let camVector = new Vector3();
 const PI_2 = Math.PI / 2;
@@ -30,53 +32,153 @@ let inTouchMove = false;
 
 let controller1, controller2;
 let controllerGrip1, controllerGrip2;
-let cameraVector = new THREE.Vector3();
-let prevGamePads = new Map();
-let speedFactor = [0.2, 0.2, 0.2, 0.2];
 
 let vrButtonStyle = 'position: absolute; bottom: 4px; left: calc(50% - 50px); width: 100px; padding: 12px 6px; border: 0px solid rgb(255, 255, 255); border-radius: 4px; background: rgba(0, 0, 0, 0.1); color: rgb(255, 255, 255); text-align: center; opacity: 0.5; outline: none; z-index: 30; cursor: pointer;';
 let fsButtonStyle = 'position: absolute; bottom: 4px; left: calc(50% + 60px); width: 100px; padding: 12px 6px; border: 0px solid rgb(255, 255, 255); border-radius: 4px; background: rgba(0, 0, 0, 0.1); color: rgb(255, 255, 255); text-align: center; opacity: 0.5; outline: none; z-index: 30; cursor: pointer;';
 
-const groundSize = 50;
+let credits = [
+    'Kleeblatt Quest Home (https://skfb.ly/o7ToG) by fangzhangmnm',
+    'is licensed under Creative Commons Attribution',
+    'Tesla Cybertruck (https://skfb.ly/6SB7n) by Lexyc16',
+    'is licensed under Creative Commons Attribution',
+    'SpaceX Falcon 9 Block 4.5 (https://skfb.ly/6soI9) by Forest Katsch',
+    'is licensed under Creative Commons Attribution - NonCommercial'
+];
+
+
+// Initialize
+init();
 
 function init() {
     projectm.logFunc = logFunc;
+    projectm.chatFunc = chatFunc;
     projectm.log('ProjectM', 4);
 
-    // closeStartScreen();
+    if (window.location.hostname == 'localhost') closeStartScreen();
     setupGui();
 
     setupThree();
     setupMobile();
     setupVR();
-    // setupPlatform();
 
-    // projectm.addScript('origin');
-    projectm.addScript('world');
-    projectm.addScript('panels');
-    projectm.addScript('scenery');
+    projectm.addModuleScript('world');
+    projectm.addModuleScript('panels');
+    projectm.addModuleScript('network');
+    projectm.addModuleScript('players');
+    projectm.addModuleScript('vehicles');
+
+    projectm.addGameScript('home');
+    projectm.addGameScript('rockets');
+
+    credits.forEach(credit => projectm.log(credit));
 }
 
 function logFunc(msg) {
     projectm.logstate.lines[projectm.logstate.idx++] = msg;
-    
     document.getElementById('console-text').innerHTML += msg + '<br>';
     document.getElementById('console-view').scrollIntoView();
 }
 
-function setControlMode(mode) {
-    switch (mode) {
-        case 1:
-            projectm.log('Switching to Desktop mode', 2);
-            break;
-        case 2:
-            projectm.log('Switching to Mobile mode', 2);
-            break;
-        case 3:
-            projectm.log('Switching to VR mode', 2);
-            break;
+function chatFunc(msg) {
+    projectm.chatstate.lines[projectm.chatstate.idx++] = msg;
+    document.getElementById('chat-text').innerHTML += msg + '<br>';
+    document.getElementById('chat-view').scrollIntoView();
+}
+
+function updateModuleState() {
+    for (let i = 0; i < projectm.modules.length; i++) {
+        if (!projectm.modules[i].active) {
+            projectm.modules[i].initFunc();
+            projectm.modules[i].active = true;
+            projectm.log('loaded module ' + projectm.modules[i].name);
+        }
     }
-    projectm.gamestate.controlMode = mode;
+}
+
+function updateGameState() {
+    let campos = viewPivot.position.clone();
+
+    for (let i = 0; i < projectm.games.length; i++) {
+        let game = projectm.games[i];
+
+        if (!game.active) {
+
+            projectm.log('activating game ' + game.name);
+
+            if (game.mins[0] == 0 && game.mins[1] == 0 && game.mins[2] == 0 &&
+                game.maxs[0] == 0 && game.maxs[1] == 0 && game.maxs[2] == 0) {
+                
+                projectm.log('game always visible');
+                game.alwaysVisible = true;
+            
+            } else {
+
+                let bbmin = new THREE.Vector3(game.mins[0], game.mins[1], game.mins[2]);
+                let bbmax = new THREE.Vector3(game.maxs[0], game.maxs[1], game.maxs[2]);
+                game.box = new THREE.Box3(bbmin, bbmax);
+                game.boxes = [];
+
+                for (let i = 0; i < game.drawdist.length; i++) {
+                    let bbmin0 = new THREE.Vector3(game.mins[0] - game.drawdist[i], game.mins[1] - game.drawdist[i], game.mins[2] - game.drawdist[i]);
+                    let bbmax0 = new THREE.Vector3(game.maxs[0] + game.drawdist[i], game.maxs[1] + game.drawdist[i], game.maxs[2] + game.drawdist[i]);
+                    game.boxes[i] = new THREE.Box3(bbmin0, bbmax0);
+                }
+
+                if (projectm.settings.boxes) {
+                    let boxHelper = new THREE.Box3Helper(game.box, 0xffffff);
+                    scene.add(boxHelper);
+
+                    let color = 0x0000ff;
+                    for (let i = 0; i < game.boxes.length; i++) {
+                        let boxHelper0 = new THREE.Box3Helper(game.boxes[i], color);
+                        color *= 100;
+                        scene.add(boxHelper0);
+                    }
+                }
+            }
+
+            game.viewLevel = -1;
+            game.active = true;
+            // console.log(game);
+        }
+
+        let oldViewLevel = game.viewLevel;
+        let newViewLevel = -1;
+
+        if (game.alwaysVisible) {
+
+            if (!game.loaded) {
+                projectm.log('calling init for game: ' + game.name);
+                game.initFunc();
+                game.loaded = true;
+                game.viewLevel = 0;
+            }
+
+        } else {
+
+            for (let i = game.boxes.length - 1; i >= 0; i--) {
+                if (game.boxes[i].containsPoint(campos)) {
+                    newViewLevel = i;
+                } else {
+                    break;
+                }
+            }
+
+            if (newViewLevel >= 0 && oldViewLevel == -1) {
+                if (!game.loaded) {
+                    projectm.log('init func game ' + game.name);
+                    game.initFunc();
+                    game.loaded = true;
+                }
+            }
+
+            if (newViewLevel != oldViewLevel) {
+                projectm.log(game.name + ' viewLevel: ' + newViewLevel);
+                game.viewLevel = newViewLevel;
+                if (game.viewLevelFunc) game.viewLevelFunc(newViewLevel);
+            }
+        }
+    }
 }
 
 function executeCommand(cmd) {
@@ -85,19 +187,32 @@ function executeCommand(cmd) {
 
     if (args.length > 0) {
         switch (args[0]) {
-            case "load":
+            case "/mod":
                 if (args.length > 1) {
-                    projectm.log('loading ' + args[1]);
-                    projectm.addScript(args[1]);
+                    projectm.addModuleScript(args[1]);
                 }
                 break;
-            case "test":
+            case "/game":
+                if (args.length > 1) {
+                    projectm.addGameScript(args[1]);
+                }
+                break;
+            case "/test":
                 projectm.log('test command', 4);
                 break;
             default:
                 projectm.log('command not found', 4);
                 break;
         }
+    }
+}
+
+function chatMessage(s) {
+    if (projectm.settings.network) {
+        projectm.netplayer.player.chat = s;
+        projectm.netplayer.player.chattime = projectm.netplayer.player.time;
+    } else {
+        projectm.chat('Guest1: ' + s);
     }
 }
 
@@ -123,7 +238,14 @@ function setupGui() {
         closeStartScreen();
     });  
 
-    // setTimeout(checkXRButton, 100);
+    document.getElementById('commandText').addEventListener('focus', function () {
+        inTextInput = true;
+    });
+    document.getElementById('commandText').addEventListener('blur', function () {
+        inTextInput = false;
+    });
+
+    setTimeout(checkXRButton, 100);
 }
 
 function checkXRButton() {
@@ -149,7 +271,7 @@ function setupThree() {
 
     projectm.log('Initializing Three', 1);
 
-    renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: false });
+    renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
@@ -163,14 +285,14 @@ function setupThree() {
     scene.background = new THREE.Color(0xCCCCCC);
     if (projectm.settings.fog) scene.fog = new THREE.Fog( 0xaaaa00, 20, 50 );
 
-    playerPivot = new THREE.Object3D();
-    playerPivot.position.set(playerStart[0], playerStart[1], playerStart[2]);
-    playerPivot.rotation.order = "YXZ";
-    scene.add(playerPivot);
+    viewPivot = new THREE.Object3D();
+    viewPivot.position.set(playerStart[0], playerStart[1], playerStart[2]);
+    viewPivot.rotation.order = "YXZ";
+    scene.add(viewPivot);
 
     // camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 500);
     camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10000);
-    playerPivot.add(camera);
+    viewPivot.add(camera);
 
     hemiLight = new THREE.HemisphereLight(0xCCCCCC, 0x444444);
     scene.add(hemiLight);
@@ -197,8 +319,10 @@ function setupThree() {
     document.addEventListener('pointerlockchange', onPointerlockChange);
     document.addEventListener('pointerlockerror', onPointerlockError);
 
+    projectm.three.camera = camera;
     projectm.three.renderer = renderer;
     projectm.three.scene = scene;
+    projectm.three.viewPivot = viewPivot;
 
     onWindowResize();
     renderer.setAnimationLoop(frame);
@@ -223,8 +347,6 @@ function onWindowResize() {
     camera.aspect = canvasWidth / canvasHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(canvasWidth, canvasHeight);
-    
-    document.getElementById('console').canvasHeight = canvasHeight - 100;
 }
 
 function frame() {
@@ -238,108 +360,63 @@ function frame() {
 function update(dt) {
     stats.update();
 
-    if (renderer.xr.isPresenting && projectm.gamestate.controlMode != 3) setControlMode(3);
+    if (renderer.xr.isPresenting && projectm.gamestate.deviceMode != 3) projectm.setDeviceMode(3);
 
-    if (projectm.gamestate.controlMode == 1) {
+    if (projectm.gamestate.deviceMode == 1) {
         moveWithKeys(dt);
-    } else if (projectm.gamestate.controlMode == 2) {
+    } else if (projectm.gamestate.deviceMode == 2) {
         moveWithMobile(dt);
-    } else if (projectm.gamestate.controlMode == 3) {
+    } else if (projectm.gamestate.deviceMode == 3) {
         moveWithVR();
     }
 
-    updateModState();
+    updateViewPosition(dt);
 
-    for (let i = 0; i < projectm.mods.length; i++) {
-        if (projectm.mods[i].loaded) {
-            projectm.mods[i].updateFunc(dt);
+    updateModuleState();
+
+    if (projectm.gamestate.modReadyCount == projectm.modules.length) {
+        projectm.gamestate.frameCount++;
+        
+        if (projectm.gamestate.frameCount > 60) {
+
+            for (let i = 0; i < projectm.modules.length; i++) {
+                if (projectm.modules[i].updateFunc) projectm.modules[i].updateFunc(dt);
+            }
+
+            updateGameState();
+            for (let i = 0; i < projectm.games.length; i++) {
+                if (projectm.games[i].updateFunc) projectm.games[i].updateFunc(dt);
+            }
         }
     }
-}
+
     
-function updateModState() {
-    let campos = playerPivot.position.clone();
 
-    for (let i = 0; i < projectm.mods.length; i++) {
-        let mod = projectm.mods[i];
+}
 
-        if (!mod.active) {
+function updateViewPosition(dt) {
 
-            projectm.log('activating mod: ' + mod.name);
+    if (projectm.gamestate.controlMode == 1) {
 
-            if (mod.mins[0] == 0 && mod.mins[1] == 0 && mod.mins[2] == 0 &&
-                mod.maxs[0] == 0 && mod.maxs[1] == 0 && mod.maxs[2] == 0) {
-                
-                projectm.log('mod always visible');
-                mod.alwaysVisible = true;
-            
-            } else {
+        camEuler.setFromQuaternion(viewPivot.quaternion);
+        camEuler.y -= camMouseY;
+        camEuler.x -= camMouseX;
+        camEuler.x = Math.max(PI_2 - maxPolarAngle, Math.min(PI_2 - minPolarAngle, camEuler.x));
 
-                let bbmin = new THREE.Vector3(mod.mins[0], mod.mins[1], mod.mins[2]);
-                let bbmax = new THREE.Vector3(mod.maxs[0], mod.maxs[1], mod.maxs[2]);
-                mod.box = new THREE.Box3(bbmin, bbmax);
-                mod.boxes = [];
+        viewPivot.quaternion.setFromEuler(camEuler);
 
-                for (let i = 0; i < mod.drawdist.length; i++) {
-                    let bbmin0 = new THREE.Vector3(mod.mins[0] - mod.drawdist[i], mod.mins[1] - mod.drawdist[i], mod.mins[2] - mod.drawdist[i]);
-                    let bbmax0 = new THREE.Vector3(mod.maxs[0] + mod.drawdist[i], mod.maxs[1] + mod.drawdist[i], mod.maxs[2] + mod.drawdist[i]);
-                    mod.boxes[i] = new THREE.Box3(bbmin0, bbmax0);
-                }
+        camMouseX = 0;
+        camMouseY = 0;
 
-                if (projectm.settings.boxes) {
-                    let boxHelper = new THREE.Box3Helper(mod.box, 0xffffff);
-                    scene.add(boxHelper);
+        viewPivot.rotation.y += projectm.input.steerAxis * dt * 2;
 
-                    let color = 0x0000ff;
-                    for (let i = 0; i < mod.boxes.length; i++) {
-                        let boxHelper0 = new THREE.Box3Helper(mod.boxes[i], color);
-                        color *= 100;
-                        scene.add(boxHelper0);
-                    }
-                }
-            }
+        camVector.setFromMatrixColumn(viewPivot.matrix, 2);
+        viewPivot.position.addScaledVector(camVector, projectm.input.forwardAxis * dt * -camSpeed);
 
-            mod.viewLevel = -1;
-            mod.active = true;
-            console.log(mod);
-        }
+        camVector.setFromMatrixColumn(viewPivot.matrix, 0);
+        viewPivot.position.addScaledVector(camVector, projectm.input.strafeAxis * dt * camSpeed);
 
-        let oldViewLevel = mod.viewLevel;
-        let newViewLevel = -1;
-
-        if (mod.alwaysVisible) {
-
-            if (!mod.loaded) {
-                projectm.log('calling init for mod: ' + mod.name);
-                mod.initFunc();
-                mod.loaded = true;
-                mod.viewLevel = 0;
-            }
-
-        } else {
-
-            for (let i = mod.boxes.length - 1; i >= 0; i--) {
-                if (mod.boxes[i].containsPoint(campos)) {
-                    newViewLevel = i;
-                } else {
-                    break;
-                }
-            }
-
-            if (newViewLevel >= 0 && oldViewLevel == -1) {
-                if (!mod.loaded) {
-                    projectm.log('load mod: ' + mod.name);
-                    mod.initFunc();
-                    mod.loaded = true;
-                }
-            }
-
-            if (newViewLevel != oldViewLevel) {
-                projectm.log('set ' + mod.name + ' viewLevel: ' + newViewLevel);
-                mod.viewLevel = newViewLevel;
-                if (mod.viewLevelFunc) mod.viewLevelFunc(newViewLevel);
-            }
-        }
+        viewPivot.position.addScaledVector(camera.up, projectm.input.upAxis * dt * camSpeed);
     }
 }
 
@@ -352,19 +429,24 @@ function render(time) {
 // Desktop controls
 
 function onKeyDown(evt) {
-    if (inStartScreen) return;
-    if (projectm.gamestate.modHasInput) return;
 
-    if (taskbarFocus) {
+    if (inStartScreen) return;
+    if (projectm.gamestate.gameHasInput) return;
+
+    if (inTextInput) {
         if (evt.code == "Enter") {
-            let cmd = document.getElementById('commandText').value;
-            executeCommand(cmd);
+            let s = document.getElementById('commandText').value;
+            if (s.startsWith('/')) {
+                executeCommand(s);
+            } else {
+                chatMessage(s);
+            }
             document.getElementById('commandText').value = '';
         }
     } else {
         if (!(evt.code == "F11" || evt.code == "F12")) {
             evt.preventDefault();
-        }
+        } 
 
         if (evt.code.startsWith('Key')) {
             if (evt.code == "KeyW") projectm.input.keyW = true;
@@ -375,17 +457,22 @@ function onKeyDown(evt) {
             else if (evt.code == "KeyF") projectm.input.keyF = true;
             else if (evt.code == "KeyQ") projectm.input.keyQ = true;
             else if (evt.code == "KeyE") projectm.input.keyE = true;
-            else if (evt.code == "KeyO") projectm.log(playerPivot.position.x + ', ' + playerPivot.position.y + ', ' + playerPivot.position.z);
+            else if (evt.code == "KeyO") projectm.log(viewPivot.position.x + ', ' + viewPivot.position.y + ', ' + viewPivot.position.z);
             else if (evt.code == "KeyP") console.log(projectm);
         } else if (evt.code.startsWith('Digit')) {
-            if (evt.code == "Digit1") setControlMode(1);
-            else if (evt.code == "Digit2") setControlMode(2);
-            else if (evt.code == "Digit3") setControlMode(3);
+            if (evt.code == "Digit1") projectm.setControlMode(1);
+            else if (evt.code == "Digit2") projectm.setControlMode(2);
+            else if (evt.code == "Digit3") projectm.setControlMode(3);
         } else if (evt.code.startsWith('Arrow')) {
-            if (evt.code == "ArrowLeft") projectm.input.playerLeft = true;
-            else if (evt.code == "ArrowRight") projectm.input.playerRight = true;
-            else if (evt.code == "ArrowUp") projectm.input.playerForward = true;
-            else if (evt.code == "ArrowDown") projectm.input.playerBack = true;
+            if (evt.code == "ArrowLeft") projectm.input.keyLeft = true;
+            else if (evt.code == "ArrowRight") projectm.input.keyRight = true;
+            else if (evt.code == "ArrowUp") projectm.input.keyForward = true;
+            else if (evt.code == "ArrowDown") projectm.input.keyBack = true;
+        } else if (evt.code == "Tab") {
+            if (document.getElementById('console').style.display == 'none')
+                document.getElementById('console').style.display = 'block';
+            else
+                document.getElementById('console').style.display = 'none';
         } else {
             // projectm.log(evt.code);
         }
@@ -409,10 +496,10 @@ function onKeyUp(evt) {
         else if (evt.code == "KeyQ") projectm.input.keyQ = false;
         else if (evt.code == "KeyE") projectm.input.keyE = false;
     } else if (evt.code.startsWith('Arrow')) {
-        if (evt.code == "ArrowLeft") projectm.input.playerLeft = false;
-        else if (evt.code == "ArrowRight") projectm.input.playerRight = false;
-        else if (evt.code == "ArrowUp") projectm.input.playerForward = false;
-        else if (evt.code == "ArrowDown") projectm.input.playerBack = false;
+        if (evt.code == "ArrowLeft") projectm.input.keyLeft = false;
+        else if (evt.code == "ArrowRight") projectm.input.keyRight = false;
+        else if (evt.code == "ArrowUp") projectm.input.keyForward = false;
+        else if (evt.code == "ArrowDown") projectm.input.keyBack = false;
     }
 }
 
@@ -421,10 +508,8 @@ function onMouseDown(event) {
     if (projectm.gamestate.modHasInput) return;
 
     if (!mouseLocked) {
-		if (event.clientY > canvasHeight - document.getElementById('taskbar').clientHeight) {
-			taskbarFocus = true;
+        if (event.clientY > canvasHeight - document.getElementById('taskbar').clientHeight) {
         } else {
-            taskbarFocus = false;
             document.body.requestPointerLock();
         }
     }
@@ -433,7 +518,6 @@ function onMouseDown(event) {
 function onMouseUp(evt) {
     if (projectm.gamestate.modHasInput) return;
     // evt.preventDefault();
-    // mouseLeftDown = false;
 }
 
 function onMouseMove(event) {
@@ -441,15 +525,9 @@ function onMouseMove(event) {
     if (mouseLocked) {
         const movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
         const movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
-        
-        camEuler.setFromQuaternion(playerPivot.quaternion);
 
-        camEuler.y -= movementX * 0.002 * pointerSpeed;
-        camEuler.x -= movementY * 0.002 * pointerSpeed;
-
-        camEuler.x = Math.max(PI_2 - maxPolarAngle, Math.min(PI_2 - minPolarAngle, camEuler.x));
-
-        playerPivot.quaternion.setFromEuler(camEuler);
+        camMouseX += movementY * 0.002 * pointerSpeed;
+        camMouseY += movementX * 0.002 * pointerSpeed;
     }
 }
 
@@ -457,74 +535,83 @@ function onPointerlockChange() {
     if (document.body.ownerDocument.pointerLockElement === document.body) {
         projectm.log('mouse locked', 1);
         mouseLocked = true;
-        setControlMode(1);
+        projectm.setDeviceMode(1);
 	} else {
         projectm.log('mouse unlocked', 1);
         mouseLocked = false;
+        viewPivot.rotation.x = 0;
     }
 }
 
 function onPointerlockError() {
 
-	console.error( 'Unable to use Pointer Lock API' );
+    projectm.log('Unable to use Pointer Lock API', 4);
 
 }
 
 function moveWithKeys(dt) {
-    const acc = 10;
-    const max = 20;
-    const cap = 1;
 
-    if (projectm.input.keyW) {
-        if (camSpeed[2] < max) camSpeed[2] += dt * -acc;
-    }
-    if (projectm.input.keyS) {
-        if (camSpeed[2] > -max) camSpeed[2] -= dt * -acc;
-    }
-    if (!projectm.input.keyW && !projectm.input.keyS) {
-        if (camSpeed[2] > cap) camSpeed[2] -= dt * acc;
-        else if (camSpeed[2] < -cap) camSpeed[2] += dt * acc;
-        else camSpeed[2] = 0;
-    }
+    let f = 4;
 
-    if (projectm.input.keyA) {
-        if (camSpeed[0] < max) camSpeed[0] -= dt * acc;
-    }
-    if (projectm.input.keyD) {
-        if (camSpeed[0] > -max) camSpeed[0] += dt * acc;
-    }
-    if (!projectm.input.keyA && !projectm.input.keyD) {
-        if (camSpeed[0] > cap) camSpeed[0] -= dt * acc;
-        else if (camSpeed[0] < -cap) camSpeed[0] += dt * acc;
-        else camSpeed[0] = 0;
+    if (!(projectm.input.keyForward || projectm.input.keyBack || projectm.input.keyW || projectm.input.keyS)) {
+        if (projectm.input.forwardAxis > .1) projectm.input.forwardAxis -= dt * f;
+        else if (projectm.input.forwardAxis < -.1) projectm.input.forwardAxis += dt * f;
+        else projectm.input.forwardAxis = 0;
+    } else {
+        if (projectm.input.keyForward || projectm.input.keyW) {
+            if (projectm.input.forwardAxis < 1) projectm.input.forwardAxis += dt * f;
+            if (projectm.input.forwardAxis > 1) projectm.input.forwardAxis = 1;
+        }
+        if (projectm.input.keyBack || projectm.input.keyS) {
+            if (projectm.input.forwardAxis > -1) projectm.input.forwardAxis -= dt * f;
+            if (projectm.input.forwardAxis < -1) projectm.input.forwardAxis = -1;
+        }
     }
 
-    if (projectm.input.keyR) {
-        if (camSpeed[1] < max) camSpeed[1] += dt * acc;
-    }
-    if (projectm.input.keyF) {
-        if (camSpeed[1] > -max) camSpeed[1] -= dt * acc;
-    }
-    if (!projectm.input.keyR && !projectm.input.keyF) {
-        if (camSpeed[1] > cap) camSpeed[1] -= dt * acc;
-        else if (camSpeed[1] < -cap) camSpeed[1] += dt * acc;
-        else camSpeed[1] = 0;
-    }
-
-    if (projectm.input.keyQ) {
-        playerPivot.rotation.y += 1 * dt;
-    }
-    if (projectm.input.keyE) {
-        playerPivot.rotation.y -= 1 * dt;
+    if (!(projectm.input.keyLeft || projectm.input.keyRight || projectm.input.keyQ || projectm.input.keyE)) {
+        if (projectm.input.steerAxis > .1) projectm.input.steerAxis -= dt * f;
+        else if (projectm.input.steerAxis < -.1) projectm.input.steerAxis += dt * f;
+        else projectm.input.steerAxis = 0;
+    } else {
+        if (projectm.input.keyLeft || projectm.input.keyQ) {
+            if (projectm.input.steerAxis < 1) projectm.input.steerAxis += dt * f;
+            if (projectm.input.steerAxis > 1) projectm.input.steerAxis = 1;
+        }
+        if (projectm.input.keyRight || projectm.input.keyE) {
+            if (projectm.input.steerAxis > -1) projectm.input.steerAxis -= dt * f;
+            if (projectm.input.steerAxis < -1) projectm.input.steerAxis = -1;
+        }
     }
 
-    camVector.setFromMatrixColumn(playerPivot.matrix, 2);
-    playerPivot.position.addScaledVector(camVector, camSpeed[2] * dt);
+    if (!(projectm.input.keyA || projectm.input.keyD)) {
+        if (projectm.input.strafeAxis > .1) projectm.input.strafeAxis -= dt * f;
+        else if (projectm.input.strafeAxis < -.1) projectm.input.strafeAxis += dt * f;
+        else projectm.input.strafeAxis = 0;
+    } else {
+        if (projectm.input.keyD) {
+            if (projectm.input.strafeAxis < 1) projectm.input.strafeAxis += dt * f;
+            if (projectm.input.strafeAxis > 1) projectm.input.strafeAxis = 1;
+        }
+        if (projectm.input.keyA) {
+            if (projectm.input.strafeAxis > -1) projectm.input.strafeAxis -= dt * f;
+            if (projectm.input.strafeAxis < -1) projectm.input.strafeAxis = -1;
+        }
+    }
 
-    camVector.setFromMatrixColumn(playerPivot.matrix, 0);
-    playerPivot.position.addScaledVector(camVector, camSpeed[0] * dt);
-
-    playerPivot.position.addScaledVector(camera.up, camSpeed[1] * dt);
+    if (!(projectm.input.keyR || projectm.input.keyF)) {
+        if (projectm.input.upAxis > .1) projectm.input.upAxis -= dt * f;
+        else if (projectm.input.upAxis < -.1) projectm.input.upAxis += dt * f;
+        else projectm.input.upAxis = 0;
+    } else {
+        if (projectm.input.keyR) {
+            if (projectm.input.upAxis < 1) projectm.input.upAxis += dt * f;
+            if (projectm.input.upAxis > 1) projectm.input.upAxis = 1;
+        }
+        if (projectm.input.keyF) {
+            if (projectm.input.upAxis > -1) projectm.input.upAxis -= dt * f;
+            if (projectm.input.upAxis < -1) projectm.input.upAxis = -1;
+        }
+    }
 }
 
 // Mobile controls
@@ -539,9 +626,8 @@ function setupMobile() {
 
 function onTouchStart(evt) {
     if (inStartScreen) return;
-    // if (projectm.gamestate.modHasInput) return;
     
-    if (projectm.gamestate.controlMode != 2) setControlMode(2);
+    if (projectm.gamestate.deviceMode != 2) projectm.setDeviceMode(2);
 	
     const touches = evt.touches;
     for (let i = 0; i < touches.length; i++) {
@@ -557,13 +643,12 @@ function onTouchStart(evt) {
             touchStartY = touchY;
             inTouchMove = true;
 
-            projectm.log('touch start: ' + touchX + ', ' + touchY);
+            // projectm.log('touch start: ' + touchX + ', ' + touchY);
         }
     }
 }
 
 function onTouchMove(evt) {
-    // if (projectm.gamestate.modHasInput) return;
     // evt.preventDefault();
 
     const touches = evt.touches;
@@ -573,63 +658,37 @@ function onTouchMove(evt) {
 
         touchX = x;
         touchY = y;
-        // console.log('touch move: ' + touchX + ', ' + touchY);
     }
 }
 
 function onTouchEnd(evt) {
-    // if (projectm.gamestate.modHasInput) return;
     // evt.preventDefault();
 
-    // console.log('touch end');
     inTouchMove = false;
 }
 
 function moveWithMobile(dt) {
-    // const acc = 10;
-    // const max = 20;
-    // const cap = 1;
-
-    // if (projectm.input.keyW) {
-    //     if (camSpeed[2] < max) camSpeed[2] += dt * -acc;
-    // }
-    // if (projectm.input.keyS) {
-    //     if (camSpeed[2] > -max) camSpeed[2] -= dt * -acc;
-    // }
-    // if (!projectm.input.keyW && !projectm.input.keyS) {
-    //     if (camSpeed[2] > cap) camSpeed[2] -= dt * acc;
-    //     else if (camSpeed[2] < -cap) camSpeed[2] += dt * acc;
-    //     else camSpeed[2] = 0;
-    // }
-
-    // if (projectm.input.keyA) {
-    //     if (camSpeed[0] < max) camSpeed[0] -= dt * acc;
-    // }
-    // if (projectm.input.keyD) {
-    //     if (camSpeed[0] > -max) camSpeed[0] += dt * acc;
-    // }
-    // if (!projectm.input.keyA && !projectm.input.keyD) {
-    //     if (camSpeed[0] > cap) camSpeed[0] -= dt * acc;
-    //     else if (camSpeed[0] < -cap) camSpeed[0] += dt * acc;
-    //     else camSpeed[0] = 0;
-    // }
 
     if (inTouchMove) {
         let dx = touchX - touchStartX;
-        let da = dx * -.02;
+        let da = dx * -.01;
 
-        playerPivot.rotation.y += da * dt;
+        projectm.input.steerAxis = da;
+        if (projectm.input.steerAxis > 1) projectm.input.steerAxis = 1;
+        if (projectm.input.steerAxis < -1) projectm.input.steerAxis = -1;
+        if (projectm.input.steerAxis > -.1 && projectm.input.steerAxis < .1) projectm.input.steerAxis = 0;
 
         let dy = touchY - touchStartY;
-        camSpeed[2] = dy * .05;
+        let db = dy * -.02;
 
-        camVector.setFromMatrixColumn(playerPivot.matrix, 2);
-        playerPivot.position.addScaledVector(camVector, camSpeed[2] * dt);
+        projectm.input.forwardAxis = db;
+        if (projectm.input.forwardAxis > 1) projectm.input.forwardAxis = 1;
+        if (projectm.input.forwardAxis < -1) projectm.input.forwardAxis = -1;
+        if (projectm.input.forwardAxis > -.1 && projectm.input.forwardAxis < .1) projectm.input.forwardAxis = 0;
 
-        // camVector.setFromMatrixColumn(playerPivot.matrix, 0);
-        // playerPivot.position.addScaledVector(camVector, camSpeed[0] * dt);
-
-        // playerPivot.position.addScaledVector(camera.up, camSpeed[1] * dt);
+    } else {
+        projectm.input.forwardAxis = 0;
+        projectm.input.steerAxis = 0;
     }
 }
 
@@ -664,7 +723,7 @@ function setupControllers() {
 	controller1.addEventListener("squeezestart", onSqueezeEvent);
 	controller1.addEventListener("squeeze", onSqueezeEvent);
 	controller1.addEventListener("squeezeend", onSqueezeEvent);
-    playerPivot.add(controller1);
+    viewPivot.add(controller1);
 
     controller2 = renderer.xr.getController(1);
     controller2.addEventListener('selectstart', onSelectStart);
@@ -680,17 +739,17 @@ function setupControllers() {
 	controller2.addEventListener("squeezestart", onSqueezeEvent);
 	controller2.addEventListener("squeeze", onSqueezeEvent);
 	controller2.addEventListener("squeezeend", onSqueezeEvent);
-    playerPivot.add(controller2);
+    viewPivot.add(controller2);
 
     const controllerModelFactory = new XRControllerModelFactory();
 
     controllerGrip1 = renderer.xr.getControllerGrip(0);
     controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
-    playerPivot.add(controllerGrip1);
+    viewPivot.add(controllerGrip1);
 
     controllerGrip2 = renderer.xr.getControllerGrip(1);
     controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
-    playerPivot.add(controllerGrip2);
+    viewPivot.add(controllerGrip2);
 }
 
 function buildController( data ) {
@@ -748,7 +807,6 @@ function moveWithVR() {
     var handedness = "unknown";
 
     if (renderer.xr.isPresenting) {
-        camera.getWorldDirection(cameraVector);
 
         if (controller1.userData.isSelecting) {
             // projectm.log('isSelecting1');
@@ -785,37 +843,49 @@ function moveWithVR() {
                     projectm.input.buttonA = true;
                 else
                     projectm.input.buttonA = false;
-                if (source.gamepad.buttons[5].value > .8) 
-                    projectm.input.buttonB = true;
-                else
+                if (source.gamepad.buttons[5].value > .8) {
+                    if (!projectm.input.buttonB) {
+                        projectm.input.buttonB = true;
+                        let cm = projectm.gamestate.controlMode + 1;
+                        if (cm > 3) cm = 1;
+                        projectm.setControlMode(cm);
+                    }
+                } else {
                     projectm.input.buttonB = false;
+                }
             }
 
             source.gamepad.axes.forEach((value, i) => {
-                if (Math.abs(value) > 0.2) {
-
-                    speedFactor[i] > 1 ? (speedFactor[i] = 1) : (speedFactor[i] *= 1.005);
+                if (Math.abs(value) > 0.1) {
 
                     if (i == 2) {
                         if (handedness == "left") {
-                            playerPivot.rotateY(-THREE.MathUtils.degToRad(value));
+                            projectm.input.strafeAxis = value;
                         } else {
-                            playerPivot.position.x -= cameraVector.z * speedFactor[i] * value;
-                            playerPivot.position.z += cameraVector.x * speedFactor[i] * value;
+                            projectm.input.steerAxis = -value;
+                        }
+                    } else if (i == 3) {
+                        if (handedness == "left") {
+                            projectm.input.upAxis = -value;
+                        } else {
+                            projectm.input.forwardAxis = -value;
                         }
                     }
 
-                    if (i == 3) {
-                        if (handedness == "left") {
-                            playerPivot.position.y -= speedFactor[i] * value;
-                        } else {
-                            playerPivot.position.x -= cameraVector.x * speedFactor[i] * value;
-                            playerPivot.position.z -= cameraVector.z * speedFactor[i] * value;
-                        }
-                    }
                 } else {
-                    if (Math.abs(value) > 0.05) {
-                        speedFactor[i] = 0.05;
+
+                    if (i == 2) {
+                        if (handedness == "left") {
+                            projectm.input.strafeAxis = 0;
+                        } else {
+                            projectm.input.steerAxis = 0;
+                        }
+                    } else if (i == 3) {
+                        if (handedness == "left") {
+                            projectm.input.upAxis = 0;
+                        } else {
+                            projectm.input.forwardAxis = 0;
+                        }
                     }
                 }
             });
@@ -823,26 +893,4 @@ function moveWithVR() {
     }
 }
 
-// Platform
-
-function setupPlatform() {
-    var geometry = new THREE.PlaneGeometry(groundSize, groundSize);
-	var material = new THREE.MeshStandardMaterial({
-		color: 0xcbcbcb,
-		roughness: 1.0,
-		metalness: 0.0
-	});
-	var floor = new THREE.Mesh(geometry, material);
-	floor.rotation.x = -Math.PI / 2;
- 	if (projectm.settings.shadows) floor.receiveShadow = true;
-	scene.add(floor);
-
-    const grid = new THREE.GridHelper(groundSize, groundSize);
-    scene.add(grid);
-
-}
-
-// Initialize
-
-init();
 
