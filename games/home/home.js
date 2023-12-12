@@ -24,7 +24,7 @@ function init() {
             {
                 "use": true,
                 "loaded": false,
-                "filename": 'data/models/home.glb.jpg',
+                "filename": 'data/models/home.glb',
                 "position": [0, 0, 0],
                 "center": false,
                 "flipX": false,
